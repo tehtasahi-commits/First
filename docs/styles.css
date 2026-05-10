@@ -314,6 +314,18 @@ input[type="checkbox"] {
   font-size: 16px;
 }
 
+.editor,
+.editor input,
+.editor textarea,
+.editor button {
+  -webkit-text-size-adjust: 100%;
+}
+
+.editor input,
+.editor textarea {
+  font-size: 16px !important;
+}
+
 textarea {
   resize: vertical;
 }
