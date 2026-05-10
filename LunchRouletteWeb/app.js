@@ -118,6 +118,13 @@ function daysSinceVisit(restaurant) {
   return Math.max(Math.floor((today - start) / 86400000), 0);
 }
 
+function visitStatus(restaurant) {
+  if (!restaurant.lastVisitedAt) return "从未吃过";
+  const days = daysSinceVisit(restaurant);
+  if (days === 0) return "今天吃过";
+  return `未去 ${days} 天`;
+}
+
 function effectiveWeight(restaurant) {
   const days = Math.min(daysSinceVisit(restaurant), 30);
   return Math.max(Number(restaurant.baseWeight) || 1, 0.1) * (1 + days * 0.18);
@@ -248,7 +255,10 @@ function renderWheel() {
 
 function renderRestaurants() {
   if (!state.restaurants.length) {
-    restaurantList.innerHTML = `<p class="restaurant-meta">先添加几个午餐选项。</p>`;
+    const empty = document.createElement("p");
+    empty.className = "restaurant-meta";
+    empty.textContent = "先添加几个午餐选项。";
+    restaurantList.replaceChildren(empty);
     return;
   }
 
@@ -258,28 +268,52 @@ function renderRestaurants() {
     button.className = "restaurant-card";
     button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
     button.addEventListener("click", () => openEditor(restaurant));
-    button.innerHTML = `
-      <span class="swatch" style="background:${restaurant.colorHex}"></span>
-      <span class="restaurant-main">
-        <span class="restaurant-name">${escapeHTML(restaurant.name)}</span>
-        <span class="restaurant-meta">未去 ${daysSinceVisit(restaurant)} 天 · 当前权重 ${effectiveWeight(restaurant).toFixed(1)}</span>
-      </span>
-      <span aria-hidden="true">›</span>
-    `;
+
+    const swatch = document.createElement("span");
+    swatch.className = "swatch";
+    swatch.style.background = restaurant.colorHex;
+
+    const main = document.createElement("span");
+    main.className = "restaurant-main";
+
+    const name = document.createElement("span");
+    name.className = "restaurant-name";
+    name.textContent = restaurant.name;
+
+    const meta = document.createElement("span");
+    meta.className = "restaurant-meta";
+    meta.textContent = `${visitStatus(restaurant)} · 当前权重 ${effectiveWeight(restaurant).toFixed(1)}`;
+
+    const arrow = document.createElement("span");
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "›";
+
+    main.append(name, meta);
+    button.append(swatch, main, arrow);
     return button;
   }));
 }
 
 function renderHistory() {
   if (!state.history.length) {
-    historyList.innerHTML = `<p class="history-item">还没有抽取记录</p>`;
+    const empty = document.createElement("p");
+    empty.className = "history-item";
+    empty.textContent = "还没有抽取记录";
+    historyList.replaceChildren(empty);
     return;
   }
 
   historyList.replaceChildren(...state.history.slice(0, 5).map((record) => {
     const item = document.createElement("div");
     item.className = "history-item";
-    item.innerHTML = `<strong>${escapeHTML(record.restaurantName)}</strong><span>${new Date(record.pickedAt).toLocaleDateString()}</span>`;
+
+    const name = document.createElement("strong");
+    name.textContent = record.restaurantName;
+
+    const date = document.createElement("span");
+    date.textContent = new Date(record.pickedAt).toLocaleDateString();
+
+    item.append(name, date);
     return item;
   }));
 }
@@ -289,16 +323,6 @@ function render() {
   renderWheel();
   renderRestaurants();
   renderHistory();
-}
-
-function escapeHTML(value) {
-  return value.replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  }[char]));
 }
 
 render();
