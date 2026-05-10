@@ -37,6 +37,10 @@ closeDialogBtn.addEventListener("click", () => dialog.close());
 weightInput.addEventListener("input", () => {
   weightValue.textContent = Number(weightInput.value).toFixed(1);
 });
+noteInput.addEventListener("input", fillNameFromMapLinkIfEmpty);
+noteInput.addEventListener("paste", () => {
+  window.setTimeout(fillNameFromMapLinkIfEmpty, 0);
+});
 
 deleteBtn.addEventListener("click", () => {
   if (!editingId) return;
@@ -196,6 +200,71 @@ function renderResult(restaurant) {
 
 function extractLinks(text) {
   return [...new Set(text.match(/https?:\/\/[^\s]+/g) ?? [])];
+}
+
+function fillNameFromMapLinkIfEmpty() {
+  if (nameInput.value.trim()) return;
+
+  const detectedName = extractPlaceNameFromMapURL(noteInput.value);
+  if (detectedName) {
+    nameInput.value = detectedName;
+  }
+}
+
+function extractPlaceNameFromMapURL(text) {
+  for (const link of extractLinks(text)) {
+    const name = parsePlaceNameFromURL(link);
+    if (name) return name;
+  }
+  return "";
+}
+
+function parsePlaceNameFromURL(rawURL) {
+  let url;
+  try {
+    url = new URL(rawURL);
+  } catch {
+    return "";
+  }
+
+  const host = url.hostname.replace(/^www\./, "");
+  if (!/(^|\.)google\.[^/]+$/.test(host) && host !== "maps.app.goo.gl") {
+    return "";
+  }
+
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const placeIndex = pathParts.findIndex((part) => part.toLowerCase() === "place");
+  if (placeIndex >= 0 && pathParts[placeIndex + 1]) {
+    return cleanPlaceName(pathParts[placeIndex + 1]);
+  }
+
+  const searchIndex = pathParts.findIndex((part) => part.toLowerCase() === "search");
+  if (searchIndex >= 0 && pathParts[searchIndex + 1]) {
+    return cleanPlaceName(pathParts[searchIndex + 1]);
+  }
+
+  const query = url.searchParams.get("query") || url.searchParams.get("q");
+  if (query) {
+    return cleanPlaceName(query);
+  }
+
+  return "";
+}
+
+function cleanPlaceName(value) {
+  return safeDecodeURIComponent(value)
+    .replace(/\+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s*-\s*Google Maps$/i, "")
+    .trim();
+}
+
+function safeDecodeURIComponent(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function stripLinks(text) {
