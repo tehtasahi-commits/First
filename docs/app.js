@@ -179,20 +179,40 @@ function pickToday() {
 }
 
 function renderResult(restaurant) {
+  const links = extractLinks(restaurant.note);
+  const noteText = stripLinks(restaurant.note);
+
   resultLabel.textContent = restaurant.name;
-  resultNote.textContent = restaurant.note || "已记录为今天去过，之后概率会先降低，再随未去天数慢慢升高。";
-  resultLinks.replaceChildren(...extractLinks(restaurant.note).map((url) => {
+  resultNote.textContent = noteText || "已记录为今天去过，之后概率会先降低，再随未去天数慢慢升高。";
+  resultLinks.replaceChildren(...links.map((url) => {
     const link = document.createElement("a");
     link.href = url;
     link.target = "_blank";
     link.rel = "noreferrer";
-    link.textContent = url;
+    link.textContent = linkLabel(url);
     return link;
   }));
 }
 
 function extractLinks(text) {
-  return text.match(/https?:\/\/[^\s]+/g) ?? [];
+  return [...new Set(text.match(/https?:\/\/[^\s]+/g) ?? [])];
+}
+
+function stripLinks(text) {
+  return text
+    .replace(/https?:\/\/[^\s]+/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function linkLabel(url) {
+  try {
+    const parsed = new URL(url);
+    return `打开链接：${parsed.hostname}`;
+  } catch {
+    return "打开链接";
+  }
 }
 
 function openEditor(restaurant = null) {
