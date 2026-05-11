@@ -289,6 +289,11 @@ function weightedSegments() {
   return weights.map((item) => ({ ...item, ratio: item.weight / total }));
 }
 
+function probabilityRatio(restaurant) {
+  const segments = weightedSegments();
+  return segments.find((segment) => segment.restaurant.id === restaurant.id)?.ratio ?? 0;
+}
+
 function pickWeighted() {
   const segments = weightedSegments();
   const total = segments.reduce((sum, item) => sum + item.weight, 0);
@@ -337,6 +342,7 @@ function renderResult(restaurant) {
     link.href = url;
     link.target = "_blank";
     link.rel = "noreferrer";
+    link.className = "link-pill";
     link.textContent = linkLabel(url);
     return link;
   }));
@@ -516,8 +522,17 @@ function renderWheel() {
     ctx.closePath();
     ctx.fillStyle = segment.restaurant.colorHex;
     ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.lineWidth = 8;
+    ctx.stroke();
     start = end;
   }
+
+  ctx.beginPath();
+  ctx.arc(center, center, radius - 4, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(17, 24, 39, 0.12)";
+  ctx.lineWidth = 10;
+  ctx.stroke();
 }
 
 function renderRestaurants() {
@@ -536,9 +551,10 @@ function renderRestaurants() {
     button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
     button.addEventListener("click", () => openEditor(restaurant));
 
-    const swatch = document.createElement("span");
-    swatch.className = "swatch";
-    swatch.style.background = restaurant.colorHex;
+    const avatar = document.createElement("span");
+    avatar.className = "restaurant-avatar";
+    avatar.style.background = restaurant.colorHex;
+    avatar.textContent = restaurantInitial(restaurant.name);
 
     const main = document.createElement("span");
     main.className = "restaurant-main";
@@ -549,16 +565,29 @@ function renderRestaurants() {
 
     const meta = document.createElement("span");
     meta.className = "restaurant-meta";
-    meta.textContent = `${visitStatus(restaurant)} · 当前权重 ${effectiveWeight(restaurant).toFixed(1)}`;
+    meta.textContent = `${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}% · 权重 ${effectiveWeight(restaurant).toFixed(1)}`;
+
+    const bar = document.createElement("span");
+    bar.className = "probability-bar";
+
+    const fill = document.createElement("span");
+    fill.style.width = `${Math.max(probabilityRatio(restaurant) * 100, restaurant.isEnabled ? 4 : 0)}%`;
+    fill.style.background = restaurant.colorHex;
+    bar.append(fill);
 
     const arrow = document.createElement("span");
+    arrow.className = "row-arrow";
     arrow.setAttribute("aria-hidden", "true");
     arrow.textContent = "›";
 
-    main.append(name, meta);
-    button.append(swatch, main, arrow);
+    main.append(name, meta, bar);
+    button.append(avatar, main, arrow);
     return button;
   }));
+}
+
+function restaurantInitial(name) {
+  return [...String(name || "?").trim()][0]?.toUpperCase() || "?";
 }
 
 function renderHistory() {

@@ -1,12 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#111827"/>
-  <path d="M256 66a190 190 0 1 1 0 380 190 190 0 0 1 0-380Z" fill="#f9fafb"/>
-  <path d="M256 86a170 170 0 0 1 147 85L256 256Z" fill="#f97316"/>
-  <path d="M403 171a170 170 0 0 1 0 170L256 256Z" fill="#10b981"/>
-  <path d="M403 341a170 170 0 0 1-147 85V256Z" fill="#3b82f6"/>
-  <path d="M256 426a170 170 0 0 1-147-85l147-85Z" fill="#ef4444"/>
-  <path d="M109 341a170 170 0 0 1 0-170l147 85Z" fill="#eab308"/>
-  <path d="M109 171A170 170 0 0 1 256 86v170Z" fill="#a855f7"/>
-  <circle cx="256" cy="256" r="62" fill="#111827"/>
-  <path d="M238 214v96M274 214v96M222 214v44c0 22 16 38 34 38s34-16 34-38v-44" fill="none" stroke="#f9fafb" stroke-width="18" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="bg" x1="76" y1="38" x2="438" y2="474" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <filter id="shadow" x="20" y="36" width="472" height="472" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#020617" flood-opacity=".32"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="132" cy="104" r="38" fill="#14b8a6" opacity=".32"/>
+  <circle cx="410" cy="414" r="52" fill="#f97316" opacity=".22"/>
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="264" r="176" fill="#f8fafc"/>
+    <path d="M256 98a166 166 0 0 1 144 83L256 264Z" fill="#f97316"/>
+    <path d="M400 181a166 166 0 0 1 0 166L256 264Z" fill="#10b981"/>
+    <path d="M400 347a166 166 0 0 1-144 83V264Z" fill="#3b82f6"/>
+    <path d="M256 430a166 166 0 0 1-144-83l144-83Z" fill="#ef4444"/>
+    <path d="M112 347a166 166 0 0 1 0-166l144 83Z" fill="#eab308"/>
+    <path d="M112 181A166 166 0 0 1 256 98v166Z" fill="#a855f7"/>
+    <circle cx="256" cy="264" r="72" fill="#111827"/>
+  </g>
+  <path d="M232 220v88M256 220v88M280 220v88M222 220v45c0 22 14 38 34 38s34-16 34-38v-45" fill="none" stroke="#f8fafc" stroke-width="17" stroke-linecap="round"/>
+  <path d="M334 198l26-54 26 54" fill="#f8fafc"/>
 </svg>
