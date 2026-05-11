@@ -9,6 +9,9 @@ let rotation = 0;
 const wheel = document.querySelector("#wheel");
 const ctx = wheel.getContext("2d");
 const addBtn = document.querySelector("#addBtn");
+const exportBtn = document.querySelector("#exportBtn");
+const importBtn = document.querySelector("#importBtn");
+const backupInput = document.querySelector("#backupInput");
 const pickBtn = document.querySelector("#pickBtn");
 const resultLabel = document.querySelector("#resultLabel");
 const resultNote = document.querySelector("#resultNote");
@@ -32,6 +35,9 @@ if ("serviceWorker" in navigator) {
 }
 
 addBtn.addEventListener("click", () => openEditor());
+exportBtn.addEventListener("click", exportBackup);
+importBtn.addEventListener("click", () => backupInput.click());
+backupInput.addEventListener("change", importBackup);
 pickBtn.addEventListener("click", pickToday);
 closeDialogBtn.addEventListener("click", () => dialog.close());
 weightInput.addEventListener("input", () => {
@@ -46,6 +52,7 @@ deleteBtn.addEventListener("click", () => {
   if (!editingId) return;
   const index = state.restaurants.findIndex((item) => item.id === editingId);
   if (index >= 0) {
+    rememberDeletedRestaurant(editingId);
     state.restaurants.splice(index, 1);
     saveState();
     render();
@@ -63,8 +70,8 @@ form.addEventListener("submit", (event) => {
     note: noteInput.value.trim(),
     colorHex: selectedColor,
     baseWeight: Number(weightInput.value),
-    lastVisitedAt: null,
     isEnabled: enabledInput.checked,
+    updatedAt: new Date().toISOString(),
   };
 
   if (editingId) {
@@ -73,7 +80,7 @@ form.addEventListener("submit", (event) => {
       state.restaurants[index] = { ...state.restaurants[index], ...payload };
     }
   } else {
-    state.restaurants.push({ id: crypto.randomUUID(), ...payload });
+    state.restaurants.push({ id: crypto.randomUUID(), lastVisitedAt: null, ...payload });
   }
 
   saveState();
@@ -87,12 +94,12 @@ function loadState() {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.restaurants) && Array.isArray(parsed.history)) {
-        return parsed;
+        return normalizeState(parsed);
       }
     } catch {}
   }
 
-  return {
+  return normalizeState({
     restaurants: [
       { id: crypto.randomUUID(), name: "拉面", note: "例：https://maps.apple.com", colorHex: "#F97316", baseWeight: 1, lastVisitedAt: offsetDate(-3), isEnabled: true },
       { id: crypto.randomUUID(), name: "咖喱饭", note: "想吃辣的时候", colorHex: "#EAB308", baseWeight: 1, lastVisitedAt: offsetDate(-8), isEnabled: true },
@@ -100,11 +107,92 @@ function loadState() {
       { id: crypto.randomUUID(), name: "寿司", note: "预算高一点时", colorHex: "#3B82F6", baseWeight: 1, lastVisitedAt: null, isEnabled: true },
     ],
     history: [],
-  };
+  });
 }
 
 function saveState() {
+  const stored = readStoredState();
+  const merged = stored ? mergeStates(stored, state) : normalizeState(state);
+  Object.assign(state, merged, { savedAt: new Date().toISOString() });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function readStoredState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? normalizeState(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeState(value) {
+  return {
+    schemaVersion: 2,
+    savedAt: value?.savedAt || null,
+    deletedRestaurantIDs: Array.isArray(value?.deletedRestaurantIDs) ? value.deletedRestaurantIDs : [],
+    restaurants: Array.isArray(value?.restaurants) ? value.restaurants.map(normalizeRestaurant) : [],
+    history: Array.isArray(value?.history) ? value.history.map(normalizeHistoryRecord) : [],
+  };
+}
+
+function normalizeRestaurant(restaurant) {
+  return {
+    id: restaurant.id || crypto.randomUUID(),
+    name: restaurant.name || "",
+    note: restaurant.note || "",
+    colorHex: restaurant.colorHex || colors[0],
+    baseWeight: Number(restaurant.baseWeight) || 1,
+    lastVisitedAt: restaurant.lastVisitedAt || null,
+    isEnabled: restaurant.isEnabled !== false,
+    updatedAt: restaurant.updatedAt || restaurant.lastVisitedAt || "1970-01-01T00:00:00.000Z",
+  };
+}
+
+function normalizeHistoryRecord(record) {
+  return {
+    id: record.id || crypto.randomUUID(),
+    restaurantID: record.restaurantID || "",
+    restaurantName: record.restaurantName || "",
+    pickedAt: record.pickedAt || new Date().toISOString(),
+  };
+}
+
+function mergeStates(left, right) {
+  const deleted = new Set([...(left.deletedRestaurantIDs || []), ...(right.deletedRestaurantIDs || [])]);
+  const restaurantsByID = new Map();
+
+  for (const restaurant of [...left.restaurants, ...right.restaurants]) {
+    if (deleted.has(restaurant.id)) continue;
+    const existing = restaurantsByID.get(restaurant.id);
+    if (!existing || timeValue(restaurant.updatedAt) >= timeValue(existing.updatedAt)) {
+      restaurantsByID.set(restaurant.id, restaurant);
+    }
+  }
+
+  const historyByID = new Map();
+  for (const record of [...left.history, ...right.history]) {
+    historyByID.set(record.id, record);
+  }
+
+  return {
+    schemaVersion: 2,
+    savedAt: new Date().toISOString(),
+    deletedRestaurantIDs: [...deleted],
+    restaurants: [...restaurantsByID.values()],
+    history: [...historyByID.values()]
+      .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt))
+      .slice(0, 50),
+  };
+}
+
+function timeValue(value) {
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
+}
+
+function rememberDeletedRestaurant(id) {
+  state.deletedRestaurantIDs = [...new Set([...(state.deletedRestaurantIDs || []), id])];
 }
 
 function offsetDate(days) {
@@ -167,6 +255,7 @@ function pickToday() {
   const index = state.restaurants.findIndex((item) => item.id === picked.id);
   if (index >= 0) {
     state.restaurants[index].lastVisitedAt = new Date().toISOString();
+    state.restaurants[index].updatedAt = new Date().toISOString();
   }
 
   state.history.unshift({
@@ -196,6 +285,35 @@ function renderResult(restaurant) {
     link.textContent = linkLabel(url);
     return link;
   }));
+}
+
+function exportBackup() {
+  const backup = normalizeState(state);
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const date = new Date().toISOString().slice(0, 10);
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `lunch-roulette-backup-${date}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
+async function importBackup() {
+  const file = backupInput.files?.[0];
+  backupInput.value = "";
+  if (!file) return;
+
+  try {
+    const imported = normalizeState(JSON.parse(await file.text()));
+    const merged = mergeStates(state, imported);
+    Object.assign(state, merged);
+    saveState();
+    render();
+  } catch {
+    window.alert("备份文件无法读取。");
+  }
 }
 
 function extractLinks(text) {

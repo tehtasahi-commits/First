@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="午餐轮盘" />
     <title>午餐轮盘</title>
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=6" />
+    <link rel="stylesheet" href="./styles.css?v=7" />
   </head>
   <body>
     <main class="app-shell">
@@ -17,8 +17,13 @@
           <p class="eyebrow">Lunch Roulette</p>
           <h1>午餐轮盘</h1>
         </div>
-        <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺">+</button>
+        <div class="top-actions">
+          <button id="exportBtn" class="tool-btn" type="button">备份</button>
+          <button id="importBtn" class="tool-btn" type="button">导入</button>
+          <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺">+</button>
+        </div>
       </header>
+      <input id="backupInput" type="file" accept="application/json,.json" hidden />
 
       <section class="wheel-area" aria-label="午餐轮盘">
         <div class="pointer"></div>
@@ -84,6 +89,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=6"></script>
+    <script src="./app.js?v=7"></script>
   </body>
 </html>
