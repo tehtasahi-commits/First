@@ -1,26 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="76" y1="38" x2="438" y2="474" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0f172a"/>
-      <stop offset="1" stop-color="#111827"/>
+    <radialGradient id="glow" cx="32%" cy="14%" r="78%">
+      <stop stop-color="#334155"/>
+      <stop offset=".55" stop-color="#111827"/>
+      <stop offset="1" stop-color="#020617"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="118" y1="92" x2="392" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset=".48" stop-color="#e5e7eb"/>
+      <stop offset="1" stop-color="#94a3b8"/>
     </linearGradient>
-    <filter id="shadow" x="20" y="36" width="472" height="472" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#020617" flood-opacity=".32"/>
+    <filter id="wheelShadow" x="26" y="28" width="460" height="474" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="26" stdDeviation="20" flood-color="#020617" flood-opacity=".38"/>
     </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <circle cx="132" cy="104" r="38" fill="#14b8a6" opacity=".32"/>
-  <circle cx="410" cy="414" r="52" fill="#f97316" opacity=".22"/>
-  <g filter="url(#shadow)">
-    <circle cx="256" cy="264" r="176" fill="#f8fafc"/>
-    <path d="M256 98a166 166 0 0 1 144 83L256 264Z" fill="#f97316"/>
-    <path d="M400 181a166 166 0 0 1 0 166L256 264Z" fill="#10b981"/>
-    <path d="M400 347a166 166 0 0 1-144 83V264Z" fill="#3b82f6"/>
-    <path d="M256 430a166 166 0 0 1-144-83l144-83Z" fill="#ef4444"/>
-    <path d="M112 347a166 166 0 0 1 0-166l144 83Z" fill="#eab308"/>
-    <path d="M112 181A166 166 0 0 1 256 98v166Z" fill="#a855f7"/>
-    <circle cx="256" cy="264" r="72" fill="#111827"/>
+  <rect width="512" height="512" rx="114" fill="url(#glow)"/>
+  <path d="M80 138c42-80 142-112 232-91 94 23 157 94 173 188-55-80-131-113-228-100-74 10-132 10-177 3Z" fill="#38bdf8" opacity=".18"/>
+  <path d="M64 386c72 43 155 51 248 22 58-18 104-20 138-5-44 57-116 88-203 84-81-4-143-38-183-101Z" fill="#f97316" opacity=".18"/>
+  <g filter="url(#wheelShadow)">
+    <circle cx="256" cy="264" r="182" fill="url(#rim)"/>
+    <circle cx="256" cy="264" r="164" fill="#0f172a"/>
+    <path d="M256 100a164 164 0 0 1 82 22l-82 142Z" fill="#FF6B35"/>
+    <path d="M338 122a164 164 0 0 1 60 60l-142 82Z" fill="#F59E0B"/>
+    <path d="M398 182a164 164 0 0 1 22 82H256Z" fill="#84CC16"/>
+    <path d="M420 264a164 164 0 0 1-22 82l-142-82Z" fill="#00B894"/>
+    <path d="M398 346a164 164 0 0 1-60 60l-82-142Z" fill="#06B6D4"/>
+    <path d="M338 406a164 164 0 0 1-82 22V264Z" fill="#2563EB"/>
+    <path d="M256 428a164 164 0 0 1-82-22l82-142Z" fill="#7C3AED"/>
+    <path d="M174 406a164 164 0 0 1-60-60l142-82Z" fill="#EC4899"/>
+    <path d="M114 346a164 164 0 0 1-22-82h164Z" fill="#E11D48"/>
+    <path d="M92 264a164 164 0 0 1 22-82l142 82Z" fill="#14B8A6"/>
+    <path d="M114 182a164 164 0 0 1 60-60l82 142Z" fill="#8B5CF6"/>
+    <path d="M174 122a164 164 0 0 1 82-22v164Z" fill="#F43F5E"/>
+    <circle cx="256" cy="264" r="76" fill="#020617"/>
+    <circle cx="256" cy="264" r="56" fill="#111827"/>
   </g>
-  <path d="M232 220v88M256 220v88M280 220v88M222 220v45c0 22 14 38 34 38s34-16 34-38v-45" fill="none" stroke="#f8fafc" stroke-width="17" stroke-linecap="round"/>
-  <path d="M334 198l26-54 26 54" fill="#f8fafc"/>
+  <path d="M222 202v84c0 23 16 39 34 39s34-16 34-39v-84" fill="none" stroke="#f8fafc" stroke-width="18" stroke-linecap="round"/>
+  <path d="M236 202v92M256 202v92M276 202v92" fill="none" stroke="#f8fafc" stroke-width="16" stroke-linecap="round"/>
+  <path d="M351 188l27-62 27 62" fill="#f8fafc"/>
+  <circle cx="256" cy="264" r="186" fill="none" stroke="#ffffff" stroke-opacity=".32" stroke-width="6"/>
 </svg>

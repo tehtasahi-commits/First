@@ -3,7 +3,20 @@ const MAX_BACKUP_BYTES = 250_000;
 const MAX_RESTAURANTS = 300;
 const MAX_HISTORY = 500;
 const MAX_TEXT_LENGTH = 500;
-const colors = ["#F97316", "#10B981", "#3B82F6", "#EF4444", "#A855F7", "#14B8A6", "#EAB308", "#EC4899"];
+const colors = [
+  "#FF6B35",
+  "#00B894",
+  "#2563EB",
+  "#E11D48",
+  "#7C3AED",
+  "#06B6D4",
+  "#F59E0B",
+  "#EC4899",
+  "#84CC16",
+  "#F43F5E",
+  "#8B5CF6",
+  "#14B8A6"
+];
 
 const state = loadState();
 let editingId = null;
