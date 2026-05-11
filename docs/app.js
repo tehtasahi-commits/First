@@ -1,4 +1,8 @@
 const STORAGE_KEY = "lunch-roulette-pwa-v1";
+const MAX_BACKUP_BYTES = 250_000;
+const MAX_RESTAURANTS = 300;
+const MAX_HISTORY = 500;
+const MAX_TEXT_LENGTH = 500;
 const colors = ["#F97316", "#10B981", "#3B82F6", "#EF4444", "#A855F7", "#14B8A6", "#EAB308", "#EC4899"];
 
 const state = loadState();
@@ -71,7 +75,7 @@ form.addEventListener("submit", (event) => {
     colorHex: selectedColor,
     baseWeight: Number(weightInput.value),
     isEnabled: enabledInput.checked,
-    updatedAt: new Date().toISOString(),
+    profileUpdatedAt: new Date().toISOString(),
   };
 
   if (editingId) {
@@ -127,25 +131,33 @@ function readStoredState() {
 }
 
 function normalizeState(value) {
+  const legacyDeletedIDs = Array.isArray(value?.deletedRestaurantIDs) ? value.deletedRestaurantIDs : [];
+  const deletedRestaurants = Array.isArray(value?.deletedRestaurants) ? value.deletedRestaurants : [];
+
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     savedAt: value?.savedAt || null,
-    deletedRestaurantIDs: Array.isArray(value?.deletedRestaurantIDs) ? value.deletedRestaurantIDs : [],
-    restaurants: Array.isArray(value?.restaurants) ? value.restaurants.map(normalizeRestaurant) : [],
-    history: Array.isArray(value?.history) ? value.history.map(normalizeHistoryRecord) : [],
+    deletedRestaurants: [
+      ...deletedRestaurants.map(normalizeDeletedRestaurant),
+      ...legacyDeletedIDs.map((id) => normalizeDeletedRestaurant({ id, deletedAt: "9999-12-31T23:59:59.999Z" })),
+    ].filter((item) => item.id),
+    restaurants: Array.isArray(value?.restaurants) ? value.restaurants.slice(0, MAX_RESTAURANTS).map(normalizeRestaurant) : [],
+    history: Array.isArray(value?.history) ? value.history.slice(0, MAX_HISTORY).map(normalizeHistoryRecord) : [],
   };
 }
 
 function normalizeRestaurant(restaurant) {
+  const updatedAt = restaurant.updatedAt || restaurant.lastVisitedAt || "1970-01-01T00:00:00.000Z";
   return {
     id: restaurant.id || crypto.randomUUID(),
-    name: restaurant.name || "",
-    note: restaurant.note || "",
-    colorHex: restaurant.colorHex || colors[0],
-    baseWeight: Number(restaurant.baseWeight) || 1,
+    name: sanitizeText(restaurant.name, 40),
+    note: sanitizeText(restaurant.note, MAX_TEXT_LENGTH),
+    colorHex: colors.includes(restaurant.colorHex) ? restaurant.colorHex : colors[0],
+    baseWeight: clampNumber(restaurant.baseWeight, 0.5, 5, 1),
     lastVisitedAt: restaurant.lastVisitedAt || null,
     isEnabled: restaurant.isEnabled !== false,
-    updatedAt: restaurant.updatedAt || restaurant.lastVisitedAt || "1970-01-01T00:00:00.000Z",
+    profileUpdatedAt: restaurant.profileUpdatedAt || updatedAt,
+    visitedUpdatedAt: restaurant.visitedUpdatedAt || restaurant.lastVisitedAt || "1970-01-01T00:00:00.000Z",
   };
 }
 
@@ -153,21 +165,41 @@ function normalizeHistoryRecord(record) {
   return {
     id: record.id || crypto.randomUUID(),
     restaurantID: record.restaurantID || "",
-    restaurantName: record.restaurantName || "",
+    restaurantName: sanitizeText(record.restaurantName, 40),
     pickedAt: record.pickedAt || new Date().toISOString(),
   };
 }
 
+function normalizeDeletedRestaurant(record) {
+  return {
+    id: record.id || "",
+    deletedAt: record.deletedAt || new Date().toISOString(),
+  };
+}
+
 function mergeStates(left, right) {
-  const deleted = new Set([...(left.deletedRestaurantIDs || []), ...(right.deletedRestaurantIDs || [])]);
+  const deletedByID = new Map();
+  for (const deleted of [...left.deletedRestaurants, ...right.deletedRestaurants]) {
+    const existing = deletedByID.get(deleted.id);
+    if (!existing || timeValue(deleted.deletedAt) > timeValue(existing.deletedAt)) {
+      deletedByID.set(deleted.id, deleted);
+    }
+  }
+
   const restaurantsByID = new Map();
 
   for (const restaurant of [...left.restaurants, ...right.restaurants]) {
-    if (deleted.has(restaurant.id)) continue;
+    const deleted = deletedByID.get(restaurant.id);
+    const restaurantTime = Math.max(timeValue(restaurant.profileUpdatedAt), timeValue(restaurant.visitedUpdatedAt));
+    if (deleted && timeValue(deleted.deletedAt) >= restaurantTime) continue;
+
     const existing = restaurantsByID.get(restaurant.id);
-    if (!existing || timeValue(restaurant.updatedAt) >= timeValue(existing.updatedAt)) {
+    if (!existing) {
       restaurantsByID.set(restaurant.id, restaurant);
+      continue;
     }
+
+    restaurantsByID.set(restaurant.id, mergeRestaurant(existing, restaurant));
   }
 
   const historyByID = new Map();
@@ -176,13 +208,23 @@ function mergeStates(left, right) {
   }
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     savedAt: new Date().toISOString(),
-    deletedRestaurantIDs: [...deleted],
+    deletedRestaurants: [...deletedByID.values()],
     restaurants: [...restaurantsByID.values()],
     history: [...historyByID.values()]
       .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt))
       .slice(0, 50),
+  };
+}
+
+function mergeRestaurant(left, right) {
+  const profileSource = timeValue(right.profileUpdatedAt) >= timeValue(left.profileUpdatedAt) ? right : left;
+  const visitSource = timeValue(right.visitedUpdatedAt) >= timeValue(left.visitedUpdatedAt) ? right : left;
+  return {
+    ...profileSource,
+    lastVisitedAt: visitSource.lastVisitedAt,
+    visitedUpdatedAt: visitSource.visitedUpdatedAt,
   };
 }
 
@@ -192,7 +234,20 @@ function timeValue(value) {
 }
 
 function rememberDeletedRestaurant(id) {
-  state.deletedRestaurantIDs = [...new Set([...(state.deletedRestaurantIDs || []), id])];
+  const deletedAt = new Date().toISOString();
+  const existing = new Map((state.deletedRestaurants || []).map((item) => [item.id, item]));
+  existing.set(id, { id, deletedAt });
+  state.deletedRestaurants = [...existing.values()];
+}
+
+function sanitizeText(value, maxLength) {
+  return String(value || "").slice(0, maxLength);
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(Math.max(number, min), max);
 }
 
 function offsetDate(days) {
@@ -255,7 +310,7 @@ function pickToday() {
   const index = state.restaurants.findIndex((item) => item.id === picked.id);
   if (index >= 0) {
     state.restaurants[index].lastVisitedAt = new Date().toISOString();
-    state.restaurants[index].updatedAt = new Date().toISOString();
+    state.restaurants[index].visitedUpdatedAt = new Date().toISOString();
   }
 
   state.history.unshift({
@@ -304,9 +359,14 @@ async function importBackup() {
   const file = backupInput.files?.[0];
   backupInput.value = "";
   if (!file) return;
+  if (file.size > MAX_BACKUP_BYTES) {
+    window.alert("备份文件太大，未导入。");
+    return;
+  }
 
   try {
     const imported = normalizeState(JSON.parse(await file.text()));
+    if (!window.confirm("将把备份与当前数据合并。继续导入吗？")) return;
     const merged = mergeStates(state, imported);
     Object.assign(state, merged);
     saveState();
