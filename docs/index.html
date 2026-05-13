@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
-    <meta name="theme-color" content="#111827" />
+    <meta name="theme-color" content="#FF5A45" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="午餐轮盘" />
     <title>午餐轮盘</title>
@@ -42,7 +42,6 @@
 
     <nav class="bottom-nav" aria-label="主导航">
       <button class="active" type="button"><span>⌂</span>轮盘</button>
-      <button id="listNavBtn" type="button"><span>▦</span>列表</button>
       <button id="dataNavBtn" type="button"><span>▥</span>数据</button>
       <button id="settingsNavBtn" type="button"><span>⚙</span>设置</button>
     </nav>
@@ -80,7 +79,10 @@
 
         <label>
           <span>标签（料理类型）</span>
-          <input id="categoryInput" maxlength="24" autocomplete="off" placeholder="例如：咖喱、汉堡、拉面" />
+          <div class="category-entry">
+            <input id="categoryInput" maxlength="24" autocomplete="off" placeholder="例如：咖喱、汉堡、拉面" />
+            <select id="categoryPresetSelect" aria-label="选择已有标签"></select>
+          </div>
         </label>
 
         <label>
@@ -124,6 +126,16 @@
           <button id="importBtn" class="tool-btn inline-tool" type="button"><span>▤</span>导入</button>
           <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
         </div>
+        <div class="settings-filters">
+          <label>
+            <span>搜索</span>
+            <input id="restaurantSearchInput" type="search" maxlength="40" placeholder="店名、标签或备注" />
+          </label>
+          <label>
+            <span>标签</span>
+            <select id="categoryFilterSelect"></select>
+          </label>
+        </div>
         <div id="restaurantList" class="restaurant-list settings-list"></div>
       </section>
     </dialog>
@@ -139,10 +151,15 @@
         </header>
         <section class="data-card">
           <div class="data-card-head">
-            <h3>本周坐标轴</h3>
+            <h3 id="axisTitle">本周坐标轴</h3>
             <span id="historyStats">0条记录</span>
           </div>
+          <div class="segmented-control" aria-label="选择数据范围">
+            <button id="weekRangeBtn" class="active" type="button">周</button>
+            <button id="monthRangeBtn" type="button">月</button>
+          </div>
           <div id="weekAxis" class="week-axis"></div>
+          <div id="axisDetail" class="axis-detail"></div>
         </section>
         <section class="data-card">
           <div class="data-card-head">

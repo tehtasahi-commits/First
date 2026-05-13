@@ -4,18 +4,16 @@ const MAX_RESTAURANTS = 300;
 const MAX_HISTORY = 500;
 const MAX_TEXT_LENGTH = 500;
 const colors = [
-  "#FF6B35",
-  "#00B894",
-  "#2563EB",
-  "#E11D48",
-  "#7C3AED",
-  "#06B6D4",
-  "#F59E0B",
-  "#EC4899",
-  "#84CC16",
-  "#F43F5E",
-  "#8B5CF6",
-  "#14B8A6"
+  "#FF5A45",
+  "#FF7A45",
+  "#FFA94D",
+  "#FFC857",
+  "#7ED6A5",
+  "#55CDBB",
+  "#63C5EA",
+  "#A78BFA",
+  "#F47B6B",
+  "#EF476F"
 ];
 const iconChoices = ["🍽", "🍜", "🍔", "🍛", "🍣", "🍗", "🍲", "🥗", "🍱", "🍕", "🍟", "🧋", "🥐", "🍙", "🍤", "🥟", "🍞", "☕", "🌮", "🍝"];
 
@@ -25,12 +23,12 @@ let selectedColor = colors[0];
 let selectedIcon = "";
 let rotation = 0;
 let initialVisibleDays = 7;
+let selectedDataRange = "week";
 
 const wheel = document.querySelector("#wheel");
 const ctx = wheel.getContext("2d");
 const centerPickBtn = document.querySelector("#centerPickBtn");
 const addBtn = document.querySelector("#addBtn");
-const listNavBtn = document.querySelector("#listNavBtn");
 const dataNavBtn = document.querySelector("#dataNavBtn");
 const settingsNavBtn = document.querySelector("#settingsNavBtn");
 const settingsAddBtn = document.querySelector("#settingsAddBtn");
@@ -56,13 +54,20 @@ const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
 const noteInput = document.querySelector("#noteInput");
 const categoryInput = document.querySelector("#categoryInput");
+const categoryPresetSelect = document.querySelector("#categoryPresetSelect");
 const daysInput = document.querySelector("#daysInput");
 const daysValue = document.querySelector("#daysValue");
 const enabledInput = document.querySelector("#enabledInput");
 const iconGrid = document.querySelector("#iconGrid");
 const colorGrid = document.querySelector("#colorGrid");
+const restaurantSearchInput = document.querySelector("#restaurantSearchInput");
+const categoryFilterSelect = document.querySelector("#categoryFilterSelect");
+const axisTitle = document.querySelector("#axisTitle");
 const historyStats = document.querySelector("#historyStats");
 const weekAxis = document.querySelector("#weekAxis");
+const axisDetail = document.querySelector("#axisDetail");
+const weekRangeBtn = document.querySelector("#weekRangeBtn");
+const monthRangeBtn = document.querySelector("#monthRangeBtn");
 const purgeBeforeInput = document.querySelector("#purgeBeforeInput");
 const purgeHistoryBtn = document.querySelector("#purgeHistoryBtn");
 const timelineList = document.querySelector("#timelineList");
@@ -72,7 +77,6 @@ if ("serviceWorker" in navigator) {
 }
 
 addBtn.addEventListener("click", () => openEditor());
-listNavBtn.addEventListener("click", openSettings);
 dataNavBtn.addEventListener("click", openData);
 settingsNavBtn.addEventListener("click", openSettings);
 settingsAddBtn.addEventListener("click", () => {
@@ -88,6 +92,23 @@ closeResultBtn.addEventListener("click", () => resultDialog.close());
 closeSettingsBtn.addEventListener("click", () => settingsDialog.close());
 closeDataBtn.addEventListener("click", () => dataDialog.close());
 purgeHistoryBtn.addEventListener("click", purgeHistoryBeforeDate);
+restaurantSearchInput.addEventListener("input", renderRestaurants);
+categoryFilterSelect.addEventListener("change", renderRestaurants);
+categoryPresetSelect.addEventListener("change", () => {
+  if (categoryPresetSelect.value) {
+    categoryInput.value = categoryPresetSelect.value;
+  }
+});
+categoryInput.addEventListener("input", () => {
+  if (!categoryInput.value.trim()) {
+    categoryPresetSelect.value = "";
+    return;
+  }
+  const value = sanitizeCategory(categoryInput.value);
+  categoryPresetSelect.value = existingCategories().includes(value) ? value : "";
+});
+weekRangeBtn.addEventListener("click", () => setDataRange("week"));
+monthRangeBtn.addEventListener("click", () => setDataRange("month"));
 daysInput.addEventListener("input", () => {
   daysValue.textContent = daysLabel(Number(daysInput.value));
 });
@@ -154,10 +175,10 @@ function loadState() {
 
   return normalizeState({
     restaurants: [
-      { id: crypto.randomUUID(), name: "拉面", note: "例：https://maps.apple.com", category: "拉面", colorHex: "#F97316", baseWeight: 1, lastVisitedAt: offsetDate(-3), isEnabled: true },
-      { id: crypto.randomUUID(), name: "咖喱饭", note: "想吃辣的时候", category: "咖喱", colorHex: "#EAB308", baseWeight: 1, lastVisitedAt: offsetDate(-8), isEnabled: true },
-      { id: crypto.randomUUID(), name: "定食", note: "稳定选择", category: "定食", colorHex: "#10B981", baseWeight: 1, lastVisitedAt: offsetDate(-1), isEnabled: true },
-      { id: crypto.randomUUID(), name: "寿司", note: "预算高一点时", category: "日料", colorHex: "#3B82F6", baseWeight: 1, lastVisitedAt: null, isEnabled: true },
+      { id: crypto.randomUUID(), name: "拉面", note: "例：https://maps.apple.com", category: "拉面", colorHex: "#FFA94D", baseWeight: 1, lastVisitedAt: offsetDate(-3), isEnabled: true },
+      { id: crypto.randomUUID(), name: "咖喱饭", note: "想吃辣的时候", category: "咖喱", colorHex: "#FFC857", baseWeight: 1, lastVisitedAt: offsetDate(-8), isEnabled: true },
+      { id: crypto.randomUUID(), name: "定食", note: "稳定选择", category: "定食", colorHex: "#7ED6A5", baseWeight: 1, lastVisitedAt: offsetDate(-1), isEnabled: true },
+      { id: crypto.randomUUID(), name: "寿司", note: "预算高一点时", category: "日料", colorHex: "#55CDBB", baseWeight: 1, lastVisitedAt: null, isEnabled: true },
     ],
     history: [],
   });
@@ -204,7 +225,7 @@ function normalizeRestaurant(restaurant) {
     note: sanitizeText(restaurant.note, MAX_TEXT_LENGTH),
     category: sanitizeCategory(restaurant.category),
     icon: sanitizeIcon(restaurant.icon),
-    colorHex: colors.includes(restaurant.colorHex) ? restaurant.colorHex : colors[0],
+    colorHex: sanitizeColorHex(restaurant.colorHex),
     baseWeight: clampNumber(restaurant.baseWeight, 0.5, 5, 1),
     lastVisitedAt: restaurant.lastVisitedAt || null,
     isEnabled: restaurant.isEnabled !== false,
@@ -310,6 +331,11 @@ function sanitizeCategory(value) {
 function sanitizeIcon(value) {
   const icon = String(value || "").trim();
   return iconChoices.includes(icon) ? icon : "";
+}
+
+function sanitizeColorHex(value) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toUpperCase() : colors[0];
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -614,6 +640,7 @@ function openEditor(restaurant = null) {
   daysValue.textContent = daysLabel(Number(daysInput.value));
   enabledInput.checked = restaurant?.isEnabled ?? true;
   deleteBtn.hidden = !restaurant;
+  renderCategoryPresetSelect();
   renderIconGrid();
   renderColorGrid();
   dialog.showModal();
@@ -621,6 +648,7 @@ function openEditor(restaurant = null) {
 }
 
 function openSettings() {
+  renderRestaurantFilters();
   renderRestaurants();
   settingsDialog.showModal();
 }
@@ -631,6 +659,28 @@ function openData() {
   }
   renderTimeline();
   dataDialog.showModal();
+}
+
+function setDataRange(range) {
+  selectedDataRange = range === "month" ? "month" : "week";
+  weekRangeBtn.classList.toggle("active", selectedDataRange === "week");
+  monthRangeBtn.classList.toggle("active", selectedDataRange === "month");
+  renderTimeline();
+}
+
+function existingCategories() {
+  return [...new Set(state.restaurants.map((restaurant) => restaurant.category || "未分类"))]
+    .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+}
+
+function renderCategoryPresetSelect() {
+  const current = sanitizeCategory(categoryInput.value);
+  const categories = existingCategories();
+  categoryPresetSelect.replaceChildren(
+    createOption("", categories.length ? "选择已有标签" : "暂无已有标签"),
+    ...categories.map((category) => createOption(category, category))
+  );
+  categoryPresetSelect.value = categories.includes(current) ? current : "";
 }
 
 function renderIconGrid() {
@@ -671,7 +721,7 @@ function renderWheel() {
   ctx.clearRect(0, 0, size, size);
 
   if (!segments.length) {
-    ctx.fillStyle = "#d8dee7";
+    ctx.fillStyle = "#f5e7d7";
     ctx.beginPath();
     ctx.arc(center, center, radius, 0, Math.PI * 2);
     ctx.fill();
@@ -731,16 +781,46 @@ function compactWheelName(restaurant) {
 }
 
 function renderRestaurants() {
-  if (!state.restaurants.length) {
+  const restaurants = filteredRestaurants();
+
+  if (!restaurants.length) {
     const empty = document.createElement("p");
     empty.className = "restaurant-meta";
-    empty.textContent = "先添加几个午餐选项。";
+    empty.textContent = state.restaurants.length ? "没有符合条件的店铺。" : "先添加几个午餐选项。";
     restaurantList.replaceChildren(empty);
     return;
   }
 
-  const groups = groupRestaurantsByCategory(state.restaurants);
+  const groups = groupRestaurantsByCategory(restaurants);
   restaurantList.replaceChildren(...groups.map(createRestaurantGroup));
+}
+
+function renderRestaurantFilters() {
+  const current = categoryFilterSelect.value || "all";
+  const categories = existingCategories();
+  const options = [
+    createOption("all", "全部标签"),
+    ...categories.map((category) => createOption(category, category)),
+  ];
+  categoryFilterSelect.replaceChildren(...options);
+  categoryFilterSelect.value = categories.includes(current) ? current : "all";
+}
+
+function createOption(value, label) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  return option;
+}
+
+function filteredRestaurants() {
+  const query = restaurantSearchInput.value.trim().toLowerCase();
+  const category = categoryFilterSelect.value || "all";
+  return state.restaurants.filter((restaurant) => {
+    const matchesCategory = category === "all" || restaurant.category === category;
+    const haystack = `${restaurant.name} ${restaurant.category} ${restaurant.note}`.toLowerCase();
+    return matchesCategory && (!query || haystack.includes(query));
+  });
 }
 
 function groupRestaurantsByCategory(restaurants) {
@@ -782,7 +862,10 @@ function createRestaurantCard(restaurant) {
   button.type = "button";
   button.className = "restaurant-card";
   button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
-  button.addEventListener("click", () => openEditor(restaurant));
+  button.addEventListener("click", () => {
+    if (settingsDialog.open) settingsDialog.close();
+    openEditor(restaurant);
+  });
 
   const avatar = document.createElement("span");
   avatar.className = "restaurant-avatar";
@@ -884,28 +967,21 @@ function createHistoryItem(record, isDuplicate = false) {
 }
 
 function renderTimeline() {
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const monthRecords = state.history
-    .filter((record) => {
-      const pickedAt = new Date(record.pickedAt);
-      return pickedAt >= monthStart && pickedAt < monthEnd;
-    })
-    .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt));
+  const period = dataPeriod(selectedDataRange);
+  const records = recordsInRange(period.start, period.end).sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt));
 
   renderHistoryStats();
-  renderWeekAxis();
+  renderDataAxis(period, records);
 
-  if (!monthRecords.length) {
+  if (!records.length) {
     const empty = document.createElement("p");
     empty.className = "timeline-empty";
-    empty.textContent = "这个月还没有记录。";
+    empty.textContent = selectedDataRange === "month" ? "这个月还没有记录。" : "这周还没有记录。";
     timelineList.replaceChildren(empty);
     return;
   }
 
-  timelineList.replaceChildren(...monthRecords.map((record) => {
+  timelineList.replaceChildren(...records.map((record) => {
     const item = document.createElement("div");
     item.className = "timeline-item";
 
@@ -936,46 +1012,42 @@ function renderHistoryStats() {
   historyStats.textContent = `${count}条 · 最早 ${oldestText}`;
 }
 
-function renderWeekAxis() {
-  const today = new Date();
-  const start = startOfWeek(today);
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return date;
-  });
-  const end = new Date(start);
-  end.setDate(start.getDate() + 7);
-  const weekRecords = state.history
-    .filter((record) => {
-      const pickedAt = new Date(record.pickedAt);
-      return pickedAt >= start && pickedAt < end;
-    })
-    .sort((a, b) => timeValue(a.pickedAt) - timeValue(b.pickedAt));
+function renderDataAxis(period, records) {
+  axisTitle.textContent = selectedDataRange === "month" ? "本月坐标轴" : "本周坐标轴";
+  weekAxis.className = `week-axis ${selectedDataRange === "month" ? "month-axis" : ""}`;
+  weekAxis.style.setProperty("--axis-days", String(period.days.length));
+  axisDetail.replaceChildren(createAxisHint(records.length ? "点击有数据的日期查看全部记录。" : "当前范围还没有数据点。"));
 
-  const byDate = new Map(days.map((date) => [dateKey(date), []]));
-  for (const record of weekRecords) {
+  const byDate = new Map(period.days.map((date) => [dateKey(date), []]));
+  for (const record of records.slice().sort((a, b) => timeValue(a.pickedAt) - timeValue(b.pickedAt))) {
     const key = dateKey(new Date(record.pickedAt));
     if (byDate.has(key)) byDate.get(key).push(record);
   }
 
-  weekAxis.replaceChildren(...days.map((date) => createAxisDay(date, byDate.get(dateKey(date)) || [])));
+  weekAxis.replaceChildren(...period.days.map((date) => createAxisDay(date, byDate.get(dateKey(date)) || [])));
 }
 
 function createAxisDay(date, records) {
-  const day = document.createElement("div");
+  const day = document.createElement("button");
+  day.type = "button";
   day.className = "axis-day";
+  day.disabled = !records.length;
+  if (records.length) {
+    day.addEventListener("click", () => showAxisDetails(date, records));
+  }
 
   const label = document.createElement("span");
   label.className = "axis-label";
-  label.textContent = date.toLocaleDateString("zh-CN", { weekday: "short" });
+  label.textContent = selectedDataRange === "month"
+    ? String(date.getDate())
+    : date.toLocaleDateString("zh-CN", { weekday: "short" });
 
   const rail = document.createElement("div");
   rail.className = "axis-rail";
 
-  const visibleRecords = records.slice(0, 4);
+  const visibleRecords = records.slice(0, 5);
   const dotWrap = document.createElement("div");
-  dotWrap.className = "axis-dots";
+  dotWrap.className = "axis-dots stacked";
   dotWrap.replaceChildren(...visibleRecords.map(createAxisDot));
 
   if (records.length > visibleRecords.length) {
@@ -987,7 +1059,9 @@ function createAxisDay(date, records) {
 
   const dateText = document.createElement("span");
   dateText.className = "axis-date";
-  dateText.textContent = date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+  dateText.textContent = selectedDataRange === "month"
+    ? date.toLocaleDateString("zh-CN", { weekday: "short" })
+    : date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
 
   rail.append(dotWrap);
   day.append(label, rail, dateText);
@@ -998,7 +1072,7 @@ function createAxisDot(record) {
   const restaurant = restaurantForRecord(record);
   const dot = document.createElement("span");
   dot.className = "axis-dot";
-  dot.style.background = restaurant?.colorHex || "#64748b";
+  dot.style.background = restaurant?.colorHex || "#63C5EA";
   dot.title = record.restaurantName;
   dot.setAttribute("aria-label", record.restaurantName);
   dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
@@ -1009,6 +1083,69 @@ function restaurantForRecord(record) {
   return state.restaurants.find((restaurant) => restaurant.id === record.restaurantID)
     || state.restaurants.find((restaurant) => restaurant.name === record.restaurantName)
     || null;
+}
+
+function showAxisDetails(date, records) {
+  const title = document.createElement("strong");
+  title.textContent = `${date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "long" })} · ${records.length}条`;
+
+  const list = document.createElement("div");
+  list.className = "axis-detail-list";
+  list.replaceChildren(...records
+    .slice()
+    .sort((a, b) => timeValue(a.pickedAt) - timeValue(b.pickedAt))
+    .map(createAxisDetailItem));
+
+  const detail = document.createElement("section");
+  detail.className = "axis-detail-card";
+  detail.append(title, list);
+  axisDetail.replaceChildren(detail);
+}
+
+function createAxisDetailItem(record) {
+  const restaurant = restaurantForRecord(record);
+  const item = document.createElement("div");
+  item.className = "axis-detail-item";
+
+  const dot = document.createElement("span");
+  dot.className = "axis-detail-dot";
+  dot.style.background = restaurant?.colorHex || "#63C5EA";
+  dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
+
+  const name = document.createElement("strong");
+  name.textContent = record.restaurantName;
+
+  const time = document.createElement("time");
+  time.dateTime = record.pickedAt;
+  time.textContent = new Date(record.pickedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+
+  item.append(dot, name, time);
+  return item;
+}
+
+function createAxisHint(text) {
+  const hint = document.createElement("p");
+  hint.className = "axis-hint";
+  hint.textContent = text;
+  return hint;
+}
+
+function dataPeriod(range) {
+  const now = new Date();
+  const start = range === "month" ? startOfMonth(now) : startOfWeek(now);
+  const end = range === "month"
+    ? new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    : addDays(start, 7);
+  const length = Math.round((end - start) / 86400000);
+  const days = Array.from({ length }, (_, index) => addDays(start, index));
+  return { start, end, days };
+}
+
+function recordsInRange(start, end) {
+  return state.history.filter((record) => {
+    const pickedAt = new Date(record.pickedAt);
+    return pickedAt >= start && pickedAt < end;
+  });
 }
 
 function purgeHistoryBeforeDate() {
@@ -1042,6 +1179,12 @@ function startOfWeek(date) {
   const day = start.getDay() || 7;
   start.setDate(start.getDate() - day + 1);
   return start;
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 }
 
 function dateKey(date) {
