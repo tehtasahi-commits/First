@@ -824,27 +824,48 @@ function foodIcon(restaurant) {
 }
 
 function renderHistory() {
-  if (!state.history.length) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 6);
+  cutoff.setHours(0, 0, 0, 0);
+
+  const records = state.history
+    .filter((record) => timeValue(record.pickedAt) >= cutoff.getTime())
+    .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt));
+
+  if (!records.length) {
     const empty = document.createElement("p");
     empty.className = "history-item";
-    empty.textContent = "还没有抽取记录";
+    empty.textContent = "近7天还没有记录";
     historyList.replaceChildren(empty);
     return;
   }
 
-  historyList.replaceChildren(...state.history.slice(0, 5).map((record) => {
-    const item = document.createElement("div");
-    item.className = "history-item";
+  const track = document.createElement("div");
+  const shouldRoll = records.length > 3;
+  track.className = `history-track${shouldRoll ? " rolling" : ""}`;
+  track.style.setProperty("--ticker-count", String(records.length));
+  track.replaceChildren(...records.map((record) => createHistoryItem(record)));
 
-    const name = document.createElement("strong");
-    name.textContent = record.restaurantName;
+  if (shouldRoll) {
+    track.append(...records.map((record) => createHistoryItem(record, true)));
+  }
 
-    const date = document.createElement("span");
-    date.textContent = new Date(record.pickedAt).toLocaleDateString();
+  historyList.replaceChildren(track);
+}
 
-    item.append(name, date);
-    return item;
-  }));
+function createHistoryItem(record, isDuplicate = false) {
+  const item = document.createElement("div");
+  item.className = "history-item";
+  if (isDuplicate) item.setAttribute("aria-hidden", "true");
+
+  const name = document.createElement("strong");
+  name.textContent = record.restaurantName;
+
+  const date = document.createElement("span");
+  date.textContent = new Date(record.pickedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+
+  item.append(name, date);
+  return item;
 }
 
 function renderTimeline() {

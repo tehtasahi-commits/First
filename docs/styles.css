@@ -368,6 +368,11 @@ h2 {
   overflow: hidden;
 }
 
+.history-list {
+  display: block;
+  max-height: 144px;
+}
+
 .restaurant-card {
   display: flex;
   align-items: center;
@@ -570,11 +575,56 @@ h2 {
   margin-top: 28px;
 }
 
+.history-track {
+  display: grid;
+  will-change: transform;
+}
+
+.history-track.rolling {
+  animation: history-roll calc(var(--ticker-count) * 2.4s) linear infinite;
+}
+
 .history-item {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 48px;
   padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.history-item:last-child {
+  border-bottom: 0;
+}
+
+.history-item strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item span {
+  flex: 0 0 auto;
+}
+
+@keyframes history-roll {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(var(--ticker-count) * -48px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-track.rolling {
+    animation: none;
+  }
 }
 
 .bottom-nav {
