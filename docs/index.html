@@ -132,11 +132,28 @@
       <section class="settings-panel">
         <header class="dialog-head">
           <div>
-            <h2>本月时间轴</h2>
-            <p class="dialog-subtitle">记录这个月抽到并吃过的店铺</p>
+            <h2>数据</h2>
+            <p class="dialog-subtitle">管理抽取历史缓存</p>
           </div>
           <button id="closeDataBtn" class="text-btn" type="button">关闭</button>
         </header>
+        <section class="data-card">
+          <div class="data-card-head">
+            <h3>本周坐标轴</h3>
+            <span id="historyStats">0条记录</span>
+          </div>
+          <div id="weekAxis" class="week-axis"></div>
+        </section>
+        <section class="data-card">
+          <div class="data-card-head">
+            <h3>历史缓存</h3>
+          </div>
+          <label class="cache-cleaner">
+            <span>删除此日期以前</span>
+            <input id="purgeBeforeInput" type="date" />
+          </label>
+          <button id="purgeHistoryBtn" class="danger-btn compact" type="button">删除历史记录</button>
+        </section>
         <div id="timelineList" class="timeline-list"></div>
       </section>
     </dialog>

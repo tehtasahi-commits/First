@@ -61,6 +61,10 @@ const daysValue = document.querySelector("#daysValue");
 const enabledInput = document.querySelector("#enabledInput");
 const iconGrid = document.querySelector("#iconGrid");
 const colorGrid = document.querySelector("#colorGrid");
+const historyStats = document.querySelector("#historyStats");
+const weekAxis = document.querySelector("#weekAxis");
+const purgeBeforeInput = document.querySelector("#purgeBeforeInput");
+const purgeHistoryBtn = document.querySelector("#purgeHistoryBtn");
 const timelineList = document.querySelector("#timelineList");
 
 if ("serviceWorker" in navigator) {
@@ -83,6 +87,7 @@ closeDialogBtn.addEventListener("click", () => dialog.close());
 closeResultBtn.addEventListener("click", () => resultDialog.close());
 closeSettingsBtn.addEventListener("click", () => settingsDialog.close());
 closeDataBtn.addEventListener("click", () => dataDialog.close());
+purgeHistoryBtn.addEventListener("click", purgeHistoryBeforeDate);
 daysInput.addEventListener("input", () => {
   daysValue.textContent = daysLabel(Number(daysInput.value));
 });
@@ -181,6 +186,7 @@ function normalizeState(value) {
   return {
     schemaVersion: 4,
     savedAt: value?.savedAt || null,
+    historyDeletedBefore: value?.historyDeletedBefore || null,
     deletedRestaurants: [
       ...deletedRestaurants.map(normalizeDeletedRestaurant),
       ...legacyDeletedIDs.map((id) => normalizeDeletedRestaurant({ id, deletedAt: "9999-12-31T23:59:59.999Z" })),
@@ -224,6 +230,10 @@ function normalizeDeletedRestaurant(record) {
 }
 
 function mergeStates(left, right) {
+  const historyDeletedBefore = timeValue(right.historyDeletedBefore) > timeValue(left.historyDeletedBefore)
+    ? right.historyDeletedBefore
+    : left.historyDeletedBefore;
+  const historyDeletedBeforeTime = timeValue(historyDeletedBefore);
   const deletedByID = new Map();
   for (const deleted of [...left.deletedRestaurants, ...right.deletedRestaurants]) {
     const existing = deletedByID.get(deleted.id);
@@ -250,12 +260,14 @@ function mergeStates(left, right) {
 
   const historyByID = new Map();
   for (const record of [...left.history, ...right.history]) {
+    if (historyDeletedBeforeTime && timeValue(record.pickedAt) < historyDeletedBeforeTime) continue;
     historyByID.set(record.id, record);
   }
 
   return {
     schemaVersion: 4,
     savedAt: new Date().toISOString(),
+    historyDeletedBefore,
     deletedRestaurants: [...deletedByID.values()],
     restaurants: [...restaurantsByID.values()],
     history: [...historyByID.values()]
@@ -614,6 +626,9 @@ function openSettings() {
 }
 
 function openData() {
+  if (!purgeBeforeInput.value) {
+    purgeBeforeInput.value = new Date().toISOString().slice(0, 10);
+  }
   renderTimeline();
   dataDialog.showModal();
 }
@@ -870,16 +885,19 @@ function createHistoryItem(record, isDuplicate = false) {
 
 function renderTimeline() {
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStart = startOfMonth(now);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const records = state.history
+  const monthRecords = state.history
     .filter((record) => {
       const pickedAt = new Date(record.pickedAt);
       return pickedAt >= monthStart && pickedAt < monthEnd;
     })
     .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt));
 
-  if (!records.length) {
+  renderHistoryStats();
+  renderWeekAxis();
+
+  if (!monthRecords.length) {
     const empty = document.createElement("p");
     empty.className = "timeline-empty";
     empty.textContent = "这个月还没有记录。";
@@ -887,7 +905,7 @@ function renderTimeline() {
     return;
   }
 
-  timelineList.replaceChildren(...records.map((record) => {
+  timelineList.replaceChildren(...monthRecords.map((record) => {
     const item = document.createElement("div");
     item.className = "timeline-item";
 
@@ -902,6 +920,136 @@ function renderTimeline() {
     item.append(date, name);
     return item;
   }));
+}
+
+function renderHistoryStats() {
+  const count = state.history.length;
+  if (!count) {
+    historyStats.textContent = "0条记录";
+    return;
+  }
+
+  const oldest = state.history.reduce((min, record) => Math.min(min, timeValue(record.pickedAt)), Infinity);
+  const oldestText = Number.isFinite(oldest)
+    ? new Date(oldest).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })
+    : "未知";
+  historyStats.textContent = `${count}条 · 最早 ${oldestText}`;
+}
+
+function renderWeekAxis() {
+  const today = new Date();
+  const start = startOfWeek(today);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  const weekRecords = state.history
+    .filter((record) => {
+      const pickedAt = new Date(record.pickedAt);
+      return pickedAt >= start && pickedAt < end;
+    })
+    .sort((a, b) => timeValue(a.pickedAt) - timeValue(b.pickedAt));
+
+  const byDate = new Map(days.map((date) => [dateKey(date), []]));
+  for (const record of weekRecords) {
+    const key = dateKey(new Date(record.pickedAt));
+    if (byDate.has(key)) byDate.get(key).push(record);
+  }
+
+  weekAxis.replaceChildren(...days.map((date) => createAxisDay(date, byDate.get(dateKey(date)) || [])));
+}
+
+function createAxisDay(date, records) {
+  const day = document.createElement("div");
+  day.className = "axis-day";
+
+  const label = document.createElement("span");
+  label.className = "axis-label";
+  label.textContent = date.toLocaleDateString("zh-CN", { weekday: "short" });
+
+  const rail = document.createElement("div");
+  rail.className = "axis-rail";
+
+  const visibleRecords = records.slice(0, 4);
+  const dotWrap = document.createElement("div");
+  dotWrap.className = "axis-dots";
+  dotWrap.replaceChildren(...visibleRecords.map(createAxisDot));
+
+  if (records.length > visibleRecords.length) {
+    const more = document.createElement("span");
+    more.className = "axis-more";
+    more.textContent = `+${records.length - visibleRecords.length}`;
+    dotWrap.append(more);
+  }
+
+  const dateText = document.createElement("span");
+  dateText.className = "axis-date";
+  dateText.textContent = date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+
+  rail.append(dotWrap);
+  day.append(label, rail, dateText);
+  return day;
+}
+
+function createAxisDot(record) {
+  const restaurant = restaurantForRecord(record);
+  const dot = document.createElement("span");
+  dot.className = "axis-dot";
+  dot.style.background = restaurant?.colorHex || "#64748b";
+  dot.title = record.restaurantName;
+  dot.setAttribute("aria-label", record.restaurantName);
+  dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
+  return dot;
+}
+
+function restaurantForRecord(record) {
+  return state.restaurants.find((restaurant) => restaurant.id === record.restaurantID)
+    || state.restaurants.find((restaurant) => restaurant.name === record.restaurantName)
+    || null;
+}
+
+function purgeHistoryBeforeDate() {
+  if (!purgeBeforeInput.value) return;
+  const cutoff = new Date(`${purgeBeforeInput.value}T00:00:00`);
+  if (!Number.isFinite(cutoff.getTime())) return;
+
+  const beforeCount = state.history.length;
+  const remaining = state.history.filter((record) => timeValue(record.pickedAt) >= cutoff.getTime());
+  const removed = beforeCount - remaining.length;
+  if (!removed) {
+    window.alert("没有可删除的历史记录。");
+    return;
+  }
+
+  if (!window.confirm(`将删除 ${removed} 条抽取历史记录，店铺和权重不会删除。继续吗？`)) return;
+  state.historyDeletedBefore = cutoff.toISOString();
+  state.history = remaining;
+  saveState();
+  render();
+  renderTimeline();
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function startOfWeek(date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay() || 7;
+  start.setDate(start.getDate() - day + 1);
+  return start;
+}
+
+function dateKey(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function render() {
