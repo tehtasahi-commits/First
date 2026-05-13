@@ -42,7 +42,20 @@ textarea {
 .app-shell {
   width: min(100%, 520px);
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) 20px calc(104px + env(safe-area-inset-bottom));
+  padding: max(14px, env(safe-area-inset-top)) 20px calc(88px + env(safe-area-inset-bottom));
+}
+
+.app-page {
+  display: none;
+}
+
+.app-page.active {
+  display: block;
+}
+
+.page-head {
+  padding-top: 4px;
+  margin-bottom: 16px;
 }
 
 .topbar {
@@ -190,7 +203,8 @@ h2 {
   position: absolute;
   display: grid;
   place-items: center;
-  gap: 1px;
+  align-content: center;
+  gap: 0;
   width: 96px;
   height: 96px;
   border: 0;
@@ -202,11 +216,18 @@ h2 {
   text-align: center;
 }
 
+.wheel-center span {
+  display: block;
+  line-height: .92;
+  transform: translateY(6px);
+}
+
 .wheel-center strong {
   display: block;
   color: var(--text);
   font-size: 13px;
-  line-height: 1;
+  line-height: .95;
+  transform: translateY(2px);
 }
 
 .pointer {
@@ -601,6 +622,10 @@ h2 {
   scrollbar-width: thin;
 }
 
+.week-axis.month-axis::before {
+  display: none;
+}
+
 .week-axis::before {
   content: "";
   position: absolute;
@@ -779,9 +804,9 @@ h2 {
 
 .cache-cleaner {
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .cache-cleaner span {
@@ -791,13 +816,19 @@ h2 {
 }
 
 .cache-cleaner input {
-  width: 150px;
+  width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
   color: var(--text);
   background: #fff;
   font-size: 16px;
+}
+
+.data-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .timeline-list {
@@ -818,6 +849,16 @@ h2 {
   background: rgb(255 255 255 / 82%);
 }
 
+.timeline-item.selectable {
+  grid-template-columns: auto 94px minmax(0, 1fr);
+  cursor: pointer;
+}
+
+.timeline-item input {
+  width: 18px;
+  height: 18px;
+}
+
 .timeline-item::before {
   content: "";
   position: absolute;
@@ -826,6 +867,10 @@ h2 {
   height: 8px;
   border-radius: 50%;
   background: var(--primary);
+}
+
+.timeline-item.selectable::before {
+  left: 122px;
 }
 
 .timeline-item time {
@@ -839,6 +884,12 @@ h2 {
   padding-left: 14px;
   font-size: 17px;
   overflow-wrap: anywhere;
+}
+
+.timeline-item.selectable strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timeline-empty {
@@ -913,7 +964,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   width: min(100%, 520px);
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  padding: 7px 16px calc(7px + env(safe-area-inset-bottom));
   border-top: 1px solid rgb(226 232 240 / 70%);
   border-radius: 18px 18px 0 0;
   background: rgb(255 255 255 / 88%);
@@ -925,16 +976,16 @@ h2 {
 .bottom-nav button {
   display: grid;
   place-items: center;
-  gap: 4px;
+  gap: 2px;
   border: 0;
   color: var(--muted);
   background: transparent;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
 .bottom-nav span {
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
 }
 
@@ -1019,6 +1070,11 @@ input[type="checkbox"] {
 
 @media (max-width: 380px) {
   .category-entry {
+    grid-template-columns: 1fr;
+  }
+
+  .data-actions,
+  .settings-filters {
     grid-template-columns: 1fr;
   }
 }

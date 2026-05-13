@@ -24,9 +24,15 @@ let selectedIcon = "";
 let rotation = 0;
 let initialVisibleDays = 7;
 let selectedDataRange = "week";
+let activePage = "roulette";
+const selectedHistoryIDs = new Set();
 
 const wheel = document.querySelector("#wheel");
 const ctx = wheel.getContext("2d");
+const roulettePage = document.querySelector("#roulettePage");
+const dataPage = document.querySelector("#dataPage");
+const settingsPage = document.querySelector("#settingsPage");
+const rouletteNavBtn = document.querySelector("#rouletteNavBtn");
 const centerPickBtn = document.querySelector("#centerPickBtn");
 const addBtn = document.querySelector("#addBtn");
 const dataNavBtn = document.querySelector("#dataNavBtn");
@@ -42,13 +48,9 @@ const restaurantList = document.querySelector("#restaurantList");
 const historyList = document.querySelector("#historyList");
 const dialog = document.querySelector("#editorDialog");
 const resultDialog = document.querySelector("#resultDialog");
-const settingsDialog = document.querySelector("#settingsDialog");
-const dataDialog = document.querySelector("#dataDialog");
 const form = document.querySelector("#editorForm");
 const closeDialogBtn = document.querySelector("#closeDialogBtn");
 const closeResultBtn = document.querySelector("#closeResultBtn");
-const closeSettingsBtn = document.querySelector("#closeSettingsBtn");
-const closeDataBtn = document.querySelector("#closeDataBtn");
 const deleteBtn = document.querySelector("#deleteBtn");
 const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
@@ -70,6 +72,8 @@ const weekRangeBtn = document.querySelector("#weekRangeBtn");
 const monthRangeBtn = document.querySelector("#monthRangeBtn");
 const purgeBeforeInput = document.querySelector("#purgeBeforeInput");
 const purgeHistoryBtn = document.querySelector("#purgeHistoryBtn");
+const deleteSelectedHistoryBtn = document.querySelector("#deleteSelectedHistoryBtn");
+const selectedHistoryCount = document.querySelector("#selectedHistoryCount");
 const timelineList = document.querySelector("#timelineList");
 
 if ("serviceWorker" in navigator) {
@@ -77,10 +81,10 @@ if ("serviceWorker" in navigator) {
 }
 
 addBtn.addEventListener("click", () => openEditor());
-dataNavBtn.addEventListener("click", openData);
-settingsNavBtn.addEventListener("click", openSettings);
+rouletteNavBtn.addEventListener("click", () => showPage("roulette"));
+dataNavBtn.addEventListener("click", () => showPage("data"));
+settingsNavBtn.addEventListener("click", () => showPage("settings"));
 settingsAddBtn.addEventListener("click", () => {
-  settingsDialog.close();
   openEditor();
 });
 exportBtn.addEventListener("click", exportBackup);
@@ -89,9 +93,8 @@ backupInput.addEventListener("change", importBackup);
 centerPickBtn.addEventListener("click", pickToday);
 closeDialogBtn.addEventListener("click", () => dialog.close());
 closeResultBtn.addEventListener("click", () => resultDialog.close());
-closeSettingsBtn.addEventListener("click", () => settingsDialog.close());
-closeDataBtn.addEventListener("click", () => dataDialog.close());
 purgeHistoryBtn.addEventListener("click", purgeHistoryBeforeDate);
+deleteSelectedHistoryBtn.addEventListener("click", deleteSelectedHistoryRecords);
 restaurantSearchInput.addEventListener("input", renderRestaurants);
 categoryFilterSelect.addEventListener("change", renderRestaurants);
 categoryPresetSelect.addEventListener("change", () => {
@@ -203,11 +206,13 @@ function readStoredState() {
 function normalizeState(value) {
   const legacyDeletedIDs = Array.isArray(value?.deletedRestaurantIDs) ? value.deletedRestaurantIDs : [];
   const deletedRestaurants = Array.isArray(value?.deletedRestaurants) ? value.deletedRestaurants : [];
+  const deletedHistoryRecords = Array.isArray(value?.deletedHistoryRecords) ? value.deletedHistoryRecords : [];
 
   return {
     schemaVersion: 4,
     savedAt: value?.savedAt || null,
     historyDeletedBefore: value?.historyDeletedBefore || null,
+    deletedHistoryRecords: deletedHistoryRecords.map(normalizeDeletedHistoryRecord).filter((item) => item.id),
     deletedRestaurants: [
       ...deletedRestaurants.map(normalizeDeletedRestaurant),
       ...legacyDeletedIDs.map((id) => normalizeDeletedRestaurant({ id, deletedAt: "9999-12-31T23:59:59.999Z" })),
@@ -250,11 +255,25 @@ function normalizeDeletedRestaurant(record) {
   };
 }
 
+function normalizeDeletedHistoryRecord(record) {
+  return {
+    id: record.id || "",
+    deletedAt: record.deletedAt || new Date().toISOString(),
+  };
+}
+
 function mergeStates(left, right) {
   const historyDeletedBefore = timeValue(right.historyDeletedBefore) > timeValue(left.historyDeletedBefore)
     ? right.historyDeletedBefore
     : left.historyDeletedBefore;
   const historyDeletedBeforeTime = timeValue(historyDeletedBefore);
+  const deletedHistoryByID = new Map();
+  for (const deleted of [...left.deletedHistoryRecords, ...right.deletedHistoryRecords]) {
+    const existing = deletedHistoryByID.get(deleted.id);
+    if (!existing || timeValue(deleted.deletedAt) > timeValue(existing.deletedAt)) {
+      deletedHistoryByID.set(deleted.id, deleted);
+    }
+  }
   const deletedByID = new Map();
   for (const deleted of [...left.deletedRestaurants, ...right.deletedRestaurants]) {
     const existing = deletedByID.get(deleted.id);
@@ -282,6 +301,7 @@ function mergeStates(left, right) {
   const historyByID = new Map();
   for (const record of [...left.history, ...right.history]) {
     if (historyDeletedBeforeTime && timeValue(record.pickedAt) < historyDeletedBeforeTime) continue;
+    if (deletedHistoryByID.has(record.id)) continue;
     historyByID.set(record.id, record);
   }
 
@@ -289,6 +309,7 @@ function mergeStates(left, right) {
     schemaVersion: 4,
     savedAt: new Date().toISOString(),
     historyDeletedBefore,
+    deletedHistoryRecords: [...deletedHistoryByID.values()],
     deletedRestaurants: [...deletedByID.values()],
     restaurants: [...restaurantsByID.values()],
     history: [...historyByID.values()]
@@ -648,17 +669,32 @@ function openEditor(restaurant = null) {
 }
 
 function openSettings() {
-  renderRestaurantFilters();
-  renderRestaurants();
-  settingsDialog.showModal();
+  showPage("settings");
 }
 
 function openData() {
-  if (!purgeBeforeInput.value) {
-    purgeBeforeInput.value = new Date().toISOString().slice(0, 10);
+  showPage("data");
+}
+
+function showPage(page) {
+  activePage = ["roulette", "data", "settings"].includes(page) ? page : "roulette";
+  roulettePage.classList.toggle("active", activePage === "roulette");
+  dataPage.classList.toggle("active", activePage === "data");
+  settingsPage.classList.toggle("active", activePage === "settings");
+  rouletteNavBtn.classList.toggle("active", activePage === "roulette");
+  dataNavBtn.classList.toggle("active", activePage === "data");
+  settingsNavBtn.classList.toggle("active", activePage === "settings");
+
+  if (activePage === "settings") {
+    renderRestaurantFilters();
+    renderRestaurants();
   }
-  renderTimeline();
-  dataDialog.showModal();
+  if (activePage === "data") {
+    if (!purgeBeforeInput.value) {
+      purgeBeforeInput.value = new Date().toISOString().slice(0, 10);
+    }
+    renderTimeline();
+  }
 }
 
 function setDataRange(range) {
@@ -863,7 +899,6 @@ function createRestaurantCard(restaurant) {
   button.className = "restaurant-card";
   button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
   button.addEventListener("click", () => {
-    if (settingsDialog.open) settingsDialog.close();
     openEditor(restaurant);
   });
 
@@ -978,24 +1013,52 @@ function renderTimeline() {
     empty.className = "timeline-empty";
     empty.textContent = selectedDataRange === "month" ? "这个月还没有记录。" : "这周还没有记录。";
     timelineList.replaceChildren(empty);
+    selectedHistoryIDs.clear();
+    renderSelectedHistoryState();
     return;
   }
 
-  timelineList.replaceChildren(...records.map((record) => {
-    const item = document.createElement("div");
-    item.className = "timeline-item";
+  const visibleIDs = new Set(records.map((record) => record.id));
+  for (const id of [...selectedHistoryIDs]) {
+    if (!visibleIDs.has(id)) selectedHistoryIDs.delete(id);
+  }
 
-    const pickedAt = new Date(record.pickedAt);
-    const date = document.createElement("time");
-    date.dateTime = record.pickedAt;
-    date.textContent = pickedAt.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "short" });
+  timelineList.replaceChildren(...records.map(createTimelineItem));
+  renderSelectedHistoryState();
+}
 
-    const name = document.createElement("strong");
-    name.textContent = record.restaurantName;
+function createTimelineItem(record) {
+  const item = document.createElement("label");
+  item.className = "timeline-item selectable";
 
-    item.append(date, name);
-    return item;
-  }));
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = selectedHistoryIDs.has(record.id);
+  checkbox.addEventListener("change", () => {
+    if (checkbox.checked) {
+      selectedHistoryIDs.add(record.id);
+    } else {
+      selectedHistoryIDs.delete(record.id);
+    }
+    renderSelectedHistoryState();
+  });
+
+  const pickedAt = new Date(record.pickedAt);
+  const date = document.createElement("time");
+  date.dateTime = record.pickedAt;
+  date.textContent = pickedAt.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "short" });
+
+  const name = document.createElement("strong");
+  name.textContent = record.restaurantName;
+
+  item.append(checkbox, date, name);
+  return item;
+}
+
+function renderSelectedHistoryState() {
+  const count = selectedHistoryIDs.size;
+  selectedHistoryCount.textContent = count ? `已选择 ${count} 条` : "未选择";
+  deleteSelectedHistoryBtn.disabled = count === 0;
 }
 
 function renderHistoryStats() {
@@ -1164,6 +1227,31 @@ function purgeHistoryBeforeDate() {
   if (!window.confirm(`将删除 ${removed} 条抽取历史记录，店铺和权重不会删除。继续吗？`)) return;
   state.historyDeletedBefore = cutoff.toISOString();
   state.history = remaining;
+  selectedHistoryIDs.clear();
+  saveState();
+  render();
+  renderTimeline();
+}
+
+function deleteSelectedHistoryRecords() {
+  if (!selectedHistoryIDs.size) return;
+  const ids = new Set(selectedHistoryIDs);
+  const removed = state.history.filter((record) => ids.has(record.id)).length;
+  if (!removed) {
+    selectedHistoryIDs.clear();
+    renderTimeline();
+    return;
+  }
+
+  if (!window.confirm(`将删除 ${removed} 条选中的抽取历史记录。继续吗？`)) return;
+  const deletedAt = new Date().toISOString();
+  const existing = new Map((state.deletedHistoryRecords || []).map((record) => [record.id, record]));
+  for (const id of ids) {
+    existing.set(id, { id, deletedAt });
+  }
+  state.deletedHistoryRecords = [...existing.values()];
+  state.history = state.history.filter((record) => !ids.has(record.id));
+  selectedHistoryIDs.clear();
   saveState();
   render();
   renderTimeline();
