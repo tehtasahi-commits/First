@@ -1057,7 +1057,9 @@ function createTimelineItem(record) {
 
 function renderSelectedHistoryState() {
   const count = selectedHistoryIDs.size;
-  selectedHistoryCount.textContent = count ? `已选择 ${count} 条` : "未选择";
+  selectedHistoryCount.hidden = count === 0;
+  selectedHistoryCount.textContent = count ? `已选择 ${count} 条` : "";
+  deleteSelectedHistoryBtn.hidden = count === 0;
   deleteSelectedHistoryBtn.disabled = count === 0;
 }
 

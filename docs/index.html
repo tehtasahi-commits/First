@@ -63,7 +63,7 @@
         <section class="data-card">
           <div class="data-card-head">
             <h3>历史缓存</h3>
-            <span id="selectedHistoryCount">未选择</span>
+            <span id="selectedHistoryCount" hidden></span>
           </div>
           <label class="cache-cleaner">
             <span>删除此日期以前</span>
@@ -71,7 +71,7 @@
           </label>
           <div class="data-actions">
             <button id="purgeHistoryBtn" class="danger-btn compact" type="button">删除日期以前记录</button>
-            <button id="deleteSelectedHistoryBtn" class="danger-btn compact" type="button" disabled>删除选中条目</button>
+            <button id="deleteSelectedHistoryBtn" class="danger-btn compact" type="button" hidden>删除选中条目</button>
           </div>
         </section>
         <div id="timelineList" class="timeline-list"></div>
