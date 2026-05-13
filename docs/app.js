@@ -22,9 +22,11 @@ const state = loadState();
 let editingId = null;
 let selectedColor = colors[0];
 let rotation = 0;
+let initialVisibleDays = 7;
 
 const wheel = document.querySelector("#wheel");
 const ctx = wheel.getContext("2d");
+const centerPickBtn = document.querySelector("#centerPickBtn");
 const addBtn = document.querySelector("#addBtn");
 const exportBtn = document.querySelector("#exportBtn");
 const importBtn = document.querySelector("#importBtn");
@@ -43,8 +45,8 @@ const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
 const noteInput = document.querySelector("#noteInput");
 const categoryInput = document.querySelector("#categoryInput");
-const weightInput = document.querySelector("#weightInput");
-const weightValue = document.querySelector("#weightValue");
+const daysInput = document.querySelector("#daysInput");
+const daysValue = document.querySelector("#daysValue");
 const enabledInput = document.querySelector("#enabledInput");
 const colorGrid = document.querySelector("#colorGrid");
 
@@ -57,9 +59,10 @@ exportBtn.addEventListener("click", exportBackup);
 importBtn.addEventListener("click", () => backupInput.click());
 backupInput.addEventListener("change", importBackup);
 pickBtn.addEventListener("click", pickToday);
+centerPickBtn.addEventListener("click", pickToday);
 closeDialogBtn.addEventListener("click", () => dialog.close());
-weightInput.addEventListener("input", () => {
-  weightValue.textContent = Number(weightInput.value).toFixed(1);
+daysInput.addEventListener("input", () => {
+  daysValue.textContent = daysLabel(Number(daysInput.value));
 });
 noteInput.addEventListener("input", fillNameFromMapLinkIfEmpty);
 noteInput.addEventListener("paste", () => {
@@ -88,18 +91,21 @@ form.addEventListener("submit", (event) => {
     note: noteInput.value.trim(),
     category: sanitizeCategory(categoryInput.value),
     colorHex: selectedColor,
-    baseWeight: Number(weightInput.value),
     isEnabled: enabledInput.checked,
     profileUpdatedAt: new Date().toISOString(),
   };
+  const visibleDays = Number(daysInput.value);
+  const visitFields = !editingId || visibleDays !== initialVisibleDays
+    ? visitFieldsFromVisibleDays(visibleDays)
+    : {};
 
   if (editingId) {
     const index = state.restaurants.findIndex((item) => item.id === editingId);
     if (index >= 0) {
-      state.restaurants[index] = { ...state.restaurants[index], ...payload };
+      state.restaurants[index] = { ...state.restaurants[index], ...payload, ...visitFields };
     }
   } else {
-    state.restaurants.push({ id: crypto.randomUUID(), lastVisitedAt: null, ...payload });
+    state.restaurants.push({ id: crypto.randomUUID(), baseWeight: 1, ...payload, ...visitFields });
   }
 
   saveState();
@@ -120,7 +126,7 @@ function loadState() {
 
   return normalizeState({
     restaurants: [
-      { id: crypto.randomUUID(), name: "拉面", note: "例：https://maps.apple.com", colorHex: "#F97316", baseWeight: 1, lastVisitedAt: offsetDate(-3), isEnabled: true },
+      { id: crypto.randomUUID(), name: "拉面", note: "例：https://maps.apple.com", category: "拉面", colorHex: "#F97316", baseWeight: 1, lastVisitedAt: offsetDate(-3), isEnabled: true },
       { id: crypto.randomUUID(), name: "咖喱饭", note: "想吃辣的时候", category: "咖喱", colorHex: "#EAB308", baseWeight: 1, lastVisitedAt: offsetDate(-8), isEnabled: true },
       { id: crypto.randomUUID(), name: "定食", note: "稳定选择", category: "定食", colorHex: "#10B981", baseWeight: 1, lastVisitedAt: offsetDate(-1), isEnabled: true },
       { id: crypto.randomUUID(), name: "寿司", note: "预算高一点时", category: "日料", colorHex: "#3B82F6", baseWeight: 1, lastVisitedAt: null, isEnabled: true },
@@ -259,6 +265,7 @@ function rememberDeletedRestaurant(id) {
 function sanitizeText(value, maxLength) {
   return String(value || "").slice(0, maxLength);
 }
+
 function sanitizeCategory(value) {
   const category = sanitizeText(value, 24).trim();
   return category || "未分类";
@@ -289,13 +296,34 @@ function visitStatus(restaurant) {
   if (!restaurant.lastVisitedAt) return "从未吃过";
   const days = daysSinceVisit(restaurant);
   if (days === 0) return "今天吃过";
+  if (days >= 7) return "7天以上";
   return `未去 ${days} 天`;
+}
+
+function visibleDaysSinceVisit(restaurant) {
+  return Math.min(daysSinceVisit(restaurant), 7);
+}
+
+function daysLabel(days) {
+  if (days <= 0) return "今天";
+  if (days >= 7) return "7天以上";
+  return `${days}天前`;
+}
+
+function visitFieldsFromVisibleDays(days) {
+  const normalizedDays = Math.min(Math.max(Number(days) || 0, 0), 7);
+  const lastVisitedAt = offsetDate(-normalizedDays);
+  return {
+    lastVisitedAt,
+    visitedUpdatedAt: new Date().toISOString(),
+  };
 }
 
 function effectiveWeight(restaurant) {
   const days = Math.min(daysSinceVisit(restaurant), 30);
   return Math.max(Number(restaurant.baseWeight) || 1, 0.1) * (1 + days * 0.18);
 }
+
 function categoryVisitDays(category, candidates) {
   const timestamps = candidates
     .filter((item) => item.category === category && item.lastVisitedAt)
@@ -305,16 +333,46 @@ function categoryVisitDays(category, candidates) {
   return daysSinceVisit({ lastVisitedAt: latestVisit });
 }
 
+function categoryWeight(category, candidates) {
+  const categoryRestaurants = candidates.filter((item) => item.category === category);
+  const base = categoryRestaurants.reduce((sum, item) => sum + (Number(item.baseWeight) || 1), 0) / Math.max(categoryRestaurants.length, 1);
+  const days = Math.min(categoryVisitDays(category, candidates), 30);
+  return Math.max(base, 0.1) * (1 + days * 0.2);
+}
+
 function enabledRestaurants() {
   return state.restaurants.filter((item) => item.isEnabled);
 }
 
 function weightedSegments() {
   const candidates = enabledRestaurants();
-  const weights = candidates.map((restaurant) => ({ restaurant, weight: effectiveWeight(restaurant) }));
-  const total = weights.reduce((sum, item) => sum + item.weight, 0);
-  if (total <= 0) return [];
-  return weights.map((item) => ({ ...item, ratio: item.weight / total }));
+  if (!candidates.length) return [];
+
+  const categories = [...new Set(candidates.map((item) => item.category))];
+  const categoryWeights = categories.map((category) => ({
+    category,
+    weight: categoryWeight(category, candidates),
+  }));
+  const totalCategoryWeight = categoryWeights.reduce((sum, item) => sum + item.weight, 0);
+  if (totalCategoryWeight <= 0) return [];
+
+  return categoryWeights.flatMap((categoryItem) => {
+    const restaurants = candidates.filter((item) => item.category === categoryItem.category);
+    const restaurantWeights = restaurants.map((restaurant) => ({ restaurant, weight: effectiveWeight(restaurant) }));
+    const totalRestaurantWeight = restaurantWeights.reduce((sum, item) => sum + item.weight, 0);
+    if (totalRestaurantWeight <= 0) return [];
+
+    return restaurantWeights.map((item) => {
+      const categoryRatio = categoryItem.weight / totalCategoryWeight;
+      const restaurantRatio = item.weight / totalRestaurantWeight;
+      return {
+        restaurant: item.restaurant,
+        category: categoryItem.category,
+        weight: categoryItem.weight * restaurantRatio,
+        ratio: categoryRatio * restaurantRatio,
+      };
+    });
+  });
 }
 
 function probabilityRatio(restaurant) {
@@ -323,21 +381,7 @@ function probabilityRatio(restaurant) {
 }
 
 function pickWeighted() {
-  const candidates = enabledRestaurants();
-  if (!candidates.length) return null;
-  const categories = [...new Set(candidates.map((item) => item.category))];
-  const categoryWeights = categories.map((category) => {
-    const categoryRestaurants = candidates.filter((item) => item.category === category);
-    const base = categoryRestaurants.reduce((sum, item) => sum + (Number(item.baseWeight) || 1), 0) / Math.max(categoryRestaurants.length, 1);
-    const days = Math.min(categoryVisitDays(category, candidates), 30);
-    return { category, weight: Math.max(base, 0.1) * (1 + days * 0.2) };
-  });
-  const pickedCategory = pickByWeight(categoryWeights)?.category;
-  if (!pickedCategory) return null;
-  const restaurantWeights = candidates
-    .filter((item) => item.category === pickedCategory)
-    .map((restaurant) => ({ restaurant, weight: effectiveWeight(restaurant) }));
-  return pickByWeight(restaurantWeights)?.restaurant ?? null;
+  return pickByWeight(weightedSegments())?.restaurant ?? null;
 }
 
 function pickByWeight(items) {
@@ -520,8 +564,9 @@ function openEditor(restaurant = null) {
   nameInput.value = restaurant?.name ?? "";
   noteInput.value = restaurant?.note ?? "";
   categoryInput.value = restaurant?.category ?? "";
-  weightInput.value = restaurant?.baseWeight ?? 1;
-  weightValue.textContent = Number(weightInput.value).toFixed(1);
+  daysInput.value = restaurant ? visibleDaysSinceVisit(restaurant) : 7;
+  initialVisibleDays = Number(daysInput.value);
+  daysValue.textContent = daysLabel(Number(daysInput.value));
   enabledInput.checked = restaurant?.isEnabled ?? true;
   deleteBtn.hidden = !restaurant;
   renderColorGrid();
@@ -571,6 +616,7 @@ function renderWheel() {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
     ctx.lineWidth = 8;
     ctx.stroke();
+    drawWheelLabel(segment, start, end, center, radius);
     start = end;
   }
 
@@ -579,6 +625,35 @@ function renderWheel() {
   ctx.strokeStyle = "rgba(17, 24, 39, 0.12)";
   ctx.lineWidth = 10;
   ctx.stroke();
+}
+
+function drawWheelLabel(segment, startAngle, endAngle, center, radius) {
+  const span = endAngle - startAngle;
+  if (span < 0.22) return;
+
+  const angle = startAngle + span / 2;
+  const labelRadius = radius * 0.62;
+  const x = center + Math.cos(angle) * labelRadius;
+  const y = center + Math.sin(angle) * labelRadius;
+  const name = compactWheelName(segment.restaurant);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = "#fff";
+  ctx.font = "42px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+  ctx.fillText(foodIcon(segment.restaurant), 0, -22);
+  ctx.font = "700 28px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+  ctx.fillText(name, 0, 28);
+  ctx.restore();
+}
+
+function compactWheelName(restaurant) {
+  const text = restaurant.category && restaurant.category !== "未分类" ? restaurant.category : restaurant.name;
+  return [...String(text)].slice(0, 4).join("");
 }
 
 function renderRestaurants() {
@@ -600,7 +675,7 @@ function renderRestaurants() {
     const avatar = document.createElement("span");
     avatar.className = "restaurant-avatar";
     avatar.style.background = restaurant.colorHex;
-    avatar.textContent = restaurantInitial(restaurant.name);
+    avatar.textContent = foodIcon(restaurant);
 
     const main = document.createElement("span");
     main.className = "restaurant-main";
@@ -611,7 +686,7 @@ function renderRestaurants() {
 
     const meta = document.createElement("span");
     meta.className = "restaurant-meta";
-    meta.textContent = `${restaurant.category} · ${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}% · 权重 ${effectiveWeight(restaurant).toFixed(1)}`;
+    meta.textContent = `${restaurant.category} · ${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}%`;
 
     const bar = document.createElement("span");
     bar.className = "probability-bar";
@@ -634,6 +709,25 @@ function renderRestaurants() {
 
 function restaurantInitial(name) {
   return [...String(name || "?").trim()][0]?.toUpperCase() || "?";
+}
+
+function foodIcon(restaurant) {
+  const source = `${restaurant.category || ""} ${restaurant.name || ""}`.toLowerCase();
+  const rules = [
+    [["拉面", "麺", "ramen", "面"], "🍜"],
+    [["汉堡", "burger"], "🍔"],
+    [["咖喱", "curry"], "🍛"],
+    [["寿司", "sushi", "日料"], "🍣"],
+    [["烤", "烧鸟", "烤鸡", "鸡"], "🍗"],
+    [["火锅", "锅"], "🍲"],
+    [["沙拉", "salad"], "🥗"],
+    [["定食", "便当"], "🍱"],
+    [["披萨", "pizza"], "🍕"],
+    [["炸", "薯条", "fried"], "🍟"],
+    [["甜", "蛋糕", "奶茶"], "🧋"],
+    [["面包", "可颂", "咖啡"], "🥐"],
+  ];
+  return rules.find(([keywords]) => keywords.some((keyword) => source.includes(keyword)))?.[1] ?? "🍽";
 }
 
 function renderHistory() {

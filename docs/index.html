@@ -9,19 +9,19 @@
     <meta name="apple-mobile-web-app-title" content="午餐轮盘" />
     <title>午餐轮盘</title>
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=11" />
+    <link rel="stylesheet" href="./styles.css?v=14" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Lunch Roulette</p>
+        <div class="title-block">
           <h1>午餐轮盘</h1>
+          <p class="subtitle">不知道吃什么？交给运气吧 🍴</p>
         </div>
         <div class="top-actions">
-          <button id="exportBtn" class="tool-btn" type="button">备份</button>
-          <button id="importBtn" class="tool-btn" type="button">导入</button>
-          <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺">+</button>
+          <button id="exportBtn" class="tool-btn" type="button"><span>♙</span>备份</button>
+          <button id="importBtn" class="tool-btn" type="button"><span>▤</span>导入</button>
+          <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺"><span>+</span><small>添加</small></button>
         </div>
       </header>
       <input id="backupInput" type="file" accept="application/json,.json" hidden />
@@ -29,18 +29,24 @@
       <section class="wheel-area" aria-label="午餐轮盘">
         <div class="pointer"></div>
         <canvas id="wheel" width="720" height="720"></canvas>
-        <div class="wheel-center">🍴</div>
+        <button id="centerPickBtn" class="wheel-center" type="button" aria-label="点击抽取">
+          <span>🍴</span>
+          <strong>点击抽取</strong>
+        </button>
       </section>
 
       <section class="result-panel">
-        <p id="resultLabel" class="result-label">今天吃什么？</p>
-        <p id="resultNote" class="result-note"></p>
-        <div id="resultLinks" class="result-links"></div>
-        <button id="pickBtn" class="primary-btn" type="button">开始抽取</button>
+        <div class="result-icon">✦</div>
+        <div class="result-copy">
+          <p id="resultLabel" class="result-label">今天吃什么？</p>
+          <p id="resultNote" class="result-note">让轮盘帮你做决定！</p>
+          <div id="resultLinks" class="result-links"></div>
+        </div>
+        <button id="pickBtn" class="primary-btn" type="button">🎉 开始抽取</button>
       </section>
 
       <section class="section-head">
-        <h2>店铺</h2>
+        <h2>我的店铺</h2>
         <span>越久没去，概率越高</span>
       </section>
       <div id="restaurantList" class="restaurant-list"></div>
@@ -50,6 +56,13 @@
       </section>
       <div id="historyList" class="history-list"></div>
     </main>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="active" type="button"><span>⌂</span>轮盘</button>
+      <button type="button"><span>▦</span>列表</button>
+      <button type="button"><span>▥</span>数据</button>
+      <button type="button"><span>⚙</span>设置</button>
+    </nav>
 
     <dialog id="editorDialog">
       <form id="editorForm" method="dialog" class="editor">
@@ -74,8 +87,8 @@
         </label>
 
         <label>
-          <span>基础权重 <strong id="weightValue">1.0</strong></span>
-          <input id="weightInput" type="range" min="0.5" max="5" step="0.5" value="1" />
+          <span>上次吃过 <strong id="daysValue">7天以上</strong></span>
+          <input id="daysInput" type="range" min="0" max="7" step="1" value="7" />
         </label>
 
         <label class="switch-row">
@@ -95,6 +108,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=11"></script>
+    <script src="./app.js?v=14"></script>
   </body>
 </html>
