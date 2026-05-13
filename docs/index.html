@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="午餐轮盘" />
     <title>午餐轮盘</title>
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=10" />
+    <link rel="stylesheet" href="./styles.css?v=11" />
   </head>
   <body>
     <main class="app-shell">
@@ -69,6 +69,11 @@
         </label>
 
         <label>
+          <span>标签（料理类型）</span>
+          <input id="categoryInput" maxlength="24" autocomplete="off" placeholder="例如：咖喱、汉堡、拉面" />
+        </label>
+
+        <label>
           <span>基础权重 <strong id="weightValue">1.0</strong></span>
           <input id="weightInput" type="range" min="0.5" max="5" step="0.5" value="1" />
         </label>
@@ -90,6 +95,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=10"></script>
+    <script src="./app.js?v=11"></script>
   </body>
 </html>
