@@ -42,6 +42,7 @@ const deleteBtn = document.querySelector("#deleteBtn");
 const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
 const noteInput = document.querySelector("#noteInput");
+const categoryInput = document.querySelector("#categoryInput");
 const weightInput = document.querySelector("#weightInput");
 const weightValue = document.querySelector("#weightValue");
 const enabledInput = document.querySelector("#enabledInput");
@@ -85,6 +86,7 @@ form.addEventListener("submit", (event) => {
   const payload = {
     name,
     note: noteInput.value.trim(),
+    category: sanitizeCategory(categoryInput.value),
     colorHex: selectedColor,
     baseWeight: Number(weightInput.value),
     isEnabled: enabledInput.checked,
@@ -119,9 +121,9 @@ function loadState() {
   return normalizeState({
     restaurants: [
       { id: crypto.randomUUID(), name: "拉面", note: "例：https://maps.apple.com", colorHex: "#F97316", baseWeight: 1, lastVisitedAt: offsetDate(-3), isEnabled: true },
-      { id: crypto.randomUUID(), name: "咖喱饭", note: "想吃辣的时候", colorHex: "#EAB308", baseWeight: 1, lastVisitedAt: offsetDate(-8), isEnabled: true },
-      { id: crypto.randomUUID(), name: "定食", note: "稳定选择", colorHex: "#10B981", baseWeight: 1, lastVisitedAt: offsetDate(-1), isEnabled: true },
-      { id: crypto.randomUUID(), name: "寿司", note: "预算高一点时", colorHex: "#3B82F6", baseWeight: 1, lastVisitedAt: null, isEnabled: true },
+      { id: crypto.randomUUID(), name: "咖喱饭", note: "想吃辣的时候", category: "咖喱", colorHex: "#EAB308", baseWeight: 1, lastVisitedAt: offsetDate(-8), isEnabled: true },
+      { id: crypto.randomUUID(), name: "定食", note: "稳定选择", category: "定食", colorHex: "#10B981", baseWeight: 1, lastVisitedAt: offsetDate(-1), isEnabled: true },
+      { id: crypto.randomUUID(), name: "寿司", note: "预算高一点时", category: "日料", colorHex: "#3B82F6", baseWeight: 1, lastVisitedAt: null, isEnabled: true },
     ],
     history: [],
   });
@@ -148,7 +150,7 @@ function normalizeState(value) {
   const deletedRestaurants = Array.isArray(value?.deletedRestaurants) ? value.deletedRestaurants : [];
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     savedAt: value?.savedAt || null,
     deletedRestaurants: [
       ...deletedRestaurants.map(normalizeDeletedRestaurant),
@@ -165,6 +167,7 @@ function normalizeRestaurant(restaurant) {
     id: restaurant.id || crypto.randomUUID(),
     name: sanitizeText(restaurant.name, 40),
     note: sanitizeText(restaurant.note, MAX_TEXT_LENGTH),
+    category: sanitizeCategory(restaurant.category),
     colorHex: colors.includes(restaurant.colorHex) ? restaurant.colorHex : colors[0],
     baseWeight: clampNumber(restaurant.baseWeight, 0.5, 5, 1),
     lastVisitedAt: restaurant.lastVisitedAt || null,
@@ -221,7 +224,7 @@ function mergeStates(left, right) {
   }
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     savedAt: new Date().toISOString(),
     deletedRestaurants: [...deletedByID.values()],
     restaurants: [...restaurantsByID.values()],
@@ -256,6 +259,10 @@ function rememberDeletedRestaurant(id) {
 function sanitizeText(value, maxLength) {
   return String(value || "").slice(0, maxLength);
 }
+function sanitizeCategory(value) {
+  const category = sanitizeText(value, 24).trim();
+  return category || "未分类";
+}
 
 function clampNumber(value, min, max, fallback) {
   const number = Number(value);
@@ -289,6 +296,14 @@ function effectiveWeight(restaurant) {
   const days = Math.min(daysSinceVisit(restaurant), 30);
   return Math.max(Number(restaurant.baseWeight) || 1, 0.1) * (1 + days * 0.18);
 }
+function categoryVisitDays(category, candidates) {
+  const timestamps = candidates
+    .filter((item) => item.category === category && item.lastVisitedAt)
+    .map((item) => item.lastVisitedAt);
+  if (!timestamps.length) return 30;
+  const latestVisit = timestamps.sort((a, b) => timeValue(b) - timeValue(a))[0];
+  return daysSinceVisit({ lastVisitedAt: latestVisit });
+}
 
 function enabledRestaurants() {
   return state.restaurants.filter((item) => item.isEnabled);
@@ -308,14 +323,31 @@ function probabilityRatio(restaurant) {
 }
 
 function pickWeighted() {
-  const segments = weightedSegments();
-  const total = segments.reduce((sum, item) => sum + item.weight, 0);
+  const candidates = enabledRestaurants();
+  if (!candidates.length) return null;
+  const categories = [...new Set(candidates.map((item) => item.category))];
+  const categoryWeights = categories.map((category) => {
+    const categoryRestaurants = candidates.filter((item) => item.category === category);
+    const base = categoryRestaurants.reduce((sum, item) => sum + (Number(item.baseWeight) || 1), 0) / Math.max(categoryRestaurants.length, 1);
+    const days = Math.min(categoryVisitDays(category, candidates), 30);
+    return { category, weight: Math.max(base, 0.1) * (1 + days * 0.2) };
+  });
+  const pickedCategory = pickByWeight(categoryWeights)?.category;
+  if (!pickedCategory) return null;
+  const restaurantWeights = candidates
+    .filter((item) => item.category === pickedCategory)
+    .map((restaurant) => ({ restaurant, weight: effectiveWeight(restaurant) }));
+  return pickByWeight(restaurantWeights)?.restaurant ?? null;
+}
+
+function pickByWeight(items) {
+  const total = items.reduce((sum, item) => sum + item.weight, 0);
   let threshold = Math.random() * total;
-  for (const segment of segments) {
-    threshold -= segment.weight;
-    if (threshold <= 0) return segment.restaurant;
+  for (const item of items) {
+    threshold -= item.weight;
+    if (threshold <= 0) return item;
   }
-  return segments.at(-1)?.restaurant ?? null;
+  return items.at(-1) ?? null;
 }
 
 function pickToday() {
@@ -487,6 +519,7 @@ function openEditor(restaurant = null) {
   dialogTitle.textContent = restaurant ? "编辑店铺" : "添加店铺";
   nameInput.value = restaurant?.name ?? "";
   noteInput.value = restaurant?.note ?? "";
+  categoryInput.value = restaurant?.category ?? "";
   weightInput.value = restaurant?.baseWeight ?? 1;
   weightValue.textContent = Number(weightInput.value).toFixed(1);
   enabledInput.checked = restaurant?.isEnabled ?? true;
@@ -578,7 +611,7 @@ function renderRestaurants() {
 
     const meta = document.createElement("span");
     meta.className = "restaurant-meta";
-    meta.textContent = `${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}% · 权重 ${effectiveWeight(restaurant).toFixed(1)}`;
+    meta.textContent = `${restaurant.category} · ${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}% · 权重 ${effectiveWeight(restaurant).toFixed(1)}`;
 
     const bar = document.createElement("span");
     bar.className = "probability-bar";
