@@ -25,6 +25,7 @@ let rotation = 0;
 let initialVisibleDays = 7;
 let selectedDataRange = "week";
 let activePage = "roulette";
+let historySelectionMode = false;
 const selectedHistoryIDs = new Set();
 
 const wheel = document.querySelector("#wheel");
@@ -1014,6 +1015,7 @@ function renderTimeline() {
     empty.textContent = selectedDataRange === "month" ? "这个月还没有记录。" : "这周还没有记录。";
     timelineList.replaceChildren(empty);
     selectedHistoryIDs.clear();
+    historySelectionMode = false;
     renderSelectedHistoryState();
     return;
   }
@@ -1028,20 +1030,8 @@ function renderTimeline() {
 }
 
 function createTimelineItem(record) {
-  const item = document.createElement("label");
-  item.className = "timeline-item selectable";
-
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.checked = selectedHistoryIDs.has(record.id);
-  checkbox.addEventListener("change", () => {
-    if (checkbox.checked) {
-      selectedHistoryIDs.add(record.id);
-    } else {
-      selectedHistoryIDs.delete(record.id);
-    }
-    renderSelectedHistoryState();
-  });
+  const item = document.createElement("div");
+  item.className = `timeline-item${historySelectionMode ? " selection-mode" : ""}`;
 
   const pickedAt = new Date(record.pickedAt);
   const date = document.createElement("time");
@@ -1051,14 +1041,71 @@ function createTimelineItem(record) {
   const name = document.createElement("strong");
   name.textContent = record.restaurantName;
 
-  item.append(checkbox, date, name);
+  if (historySelectionMode) {
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = selectedHistoryIDs.has(record.id);
+    checkbox.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleHistorySelection(record.id);
+    });
+    item.append(checkbox, date, name);
+  } else {
+    item.append(date, name);
+  }
+
+  let longPressTimer = null;
+  let didLongPress = false;
+
+  item.addEventListener("pointerdown", () => {
+    didLongPress = false;
+    window.clearTimeout(longPressTimer);
+    longPressTimer = window.setTimeout(() => {
+      didLongPress = true;
+      historySelectionMode = true;
+      selectedHistoryIDs.add(record.id);
+      renderTimeline();
+    }, 520);
+  });
+
+  for (const eventName of ["pointerup", "pointerleave", "pointercancel", "pointermove"]) {
+    item.addEventListener(eventName, () => {
+      window.clearTimeout(longPressTimer);
+    });
+  }
+
+  item.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    historySelectionMode = true;
+    selectedHistoryIDs.add(record.id);
+    renderTimeline();
+  });
+
+  item.addEventListener("click", () => {
+    window.clearTimeout(longPressTimer);
+    if (didLongPress || !historySelectionMode) return;
+    toggleHistorySelection(record.id);
+  });
+
   return item;
+}
+
+function toggleHistorySelection(id) {
+  if (selectedHistoryIDs.has(id)) {
+    selectedHistoryIDs.delete(id);
+  } else {
+    selectedHistoryIDs.add(id);
+  }
+  if (!selectedHistoryIDs.size) {
+    historySelectionMode = false;
+  }
+  renderTimeline();
 }
 
 function renderSelectedHistoryState() {
   const count = selectedHistoryIDs.size;
   selectedHistoryCount.hidden = count === 0;
-  selectedHistoryCount.textContent = count ? `已选择 ${count} 条` : "";
+  selectedHistoryCount.textContent = count ? `已选 ${count}` : "";
   deleteSelectedHistoryBtn.hidden = count === 0;
   deleteSelectedHistoryBtn.disabled = count === 0;
 }
@@ -1230,6 +1277,7 @@ function purgeHistoryBeforeDate() {
   state.historyDeletedBefore = cutoff.toISOString();
   state.history = remaining;
   selectedHistoryIDs.clear();
+  historySelectionMode = false;
   saveState();
   render();
   renderTimeline();
@@ -1241,6 +1289,7 @@ function deleteSelectedHistoryRecords() {
   const removed = state.history.filter((record) => ids.has(record.id)).length;
   if (!removed) {
     selectedHistoryIDs.clear();
+    historySelectionMode = false;
     renderTimeline();
     return;
   }
@@ -1254,6 +1303,7 @@ function deleteSelectedHistoryRecords() {
   state.deletedHistoryRecords = [...existing.values()];
   state.history = state.history.filter((record) => !ids.has(record.id));
   selectedHistoryIDs.clear();
+  historySelectionMode = false;
   saveState();
   render();
   renderTimeline();

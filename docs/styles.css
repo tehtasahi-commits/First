@@ -204,7 +204,7 @@ h2 {
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 2px;
+  gap: 10px;
   width: 96px;
   height: 96px;
   border: 0;
@@ -219,7 +219,7 @@ h2 {
 .wheel-center span {
   display: block;
   line-height: .92;
-  transform: translateY(2px);
+  transform: translateY(0);
 }
 
 .wheel-center strong {
@@ -227,7 +227,7 @@ h2 {
   color: var(--text);
   font-size: 13px;
   line-height: .95;
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .pointer {
@@ -500,6 +500,35 @@ h2 {
   gap: 10px;
 }
 
+.settings-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-head > div:first-child {
+  min-width: 0;
+}
+
+.settings-head .settings-actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.settings-head .inline-tool {
+  min-width: 54px;
+  min-height: 46px;
+  padding: 6px 8px;
+}
+
+.settings-head .primary-btn {
+  min-height: 46px;
+  padding: 0 12px;
+}
+
 .inline-tool {
   min-width: 76px;
   min-height: 44px;
@@ -578,6 +607,20 @@ h2 {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.history-select-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.history-select-tools .danger-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .segmented-control {
@@ -807,6 +850,7 @@ h2 {
   grid-template-columns: 1fr;
   align-items: stretch;
   gap: 8px;
+  width: min(100%, 218px);
 }
 
 .cache-cleaner span {
@@ -816,7 +860,7 @@ h2 {
 }
 
 .cache-cleaner input {
-  width: calc(100% - 8px);
+  width: 100%;
   max-width: 100%;
   min-width: 0;
   justify-self: start;
@@ -830,13 +874,18 @@ h2 {
 
 .data-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+  width: min(100%, 218px);
 }
 
 .timeline-list {
   display: grid;
   gap: 10px;
+}
+
+.history-cache-card .timeline-list {
+  min-height: 54px;
 }
 
 .timeline-item {
@@ -850,9 +899,11 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgb(255 255 255 / 82%);
+  touch-action: manipulation;
+  user-select: none;
 }
 
-.timeline-item.selectable {
+.timeline-item.selection-mode {
   grid-template-columns: auto 94px minmax(0, 1fr);
   cursor: pointer;
 }
@@ -872,7 +923,7 @@ h2 {
   background: var(--primary);
 }
 
-.timeline-item.selectable::before {
+.timeline-item.selection-mode::before {
   left: 122px;
 }
 
@@ -889,7 +940,7 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.timeline-item.selectable strong {
+.timeline-item.selection-mode strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

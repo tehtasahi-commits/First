@@ -60,35 +60,40 @@
           <div id="weekAxis" class="week-axis"></div>
           <div id="axisDetail" class="axis-detail"></div>
         </section>
-        <section class="data-card">
+        <section class="data-card history-cache-card">
           <div class="data-card-head">
             <h3>历史缓存</h3>
-            <span id="selectedHistoryCount" hidden></span>
+            <div class="history-select-tools">
+              <span id="selectedHistoryCount" hidden></span>
+              <button id="deleteSelectedHistoryBtn" class="danger-btn compact" type="button" hidden>删除选中</button>
+            </div>
           </div>
+          <div id="timelineList" class="timeline-list"></div>
+        </section>
+        <section class="data-card history-cleanup-card">
+          <h3>清理历史</h3>
           <label class="cache-cleaner">
             <span>删除此日期以前</span>
             <input id="purgeBeforeInput" type="date" />
           </label>
           <div class="data-actions">
             <button id="purgeHistoryBtn" class="danger-btn compact" type="button">删除日期以前记录</button>
-            <button id="deleteSelectedHistoryBtn" class="danger-btn compact" type="button" hidden>删除选中条目</button>
           </div>
         </section>
-        <div id="timelineList" class="timeline-list"></div>
       </section>
 
       <section id="settingsPage" class="app-page">
-        <header class="page-head">
+        <header class="page-head settings-head">
           <div>
             <h1>设置</h1>
             <p class="subtitle">按标签管理店铺</p>
           </div>
+          <div class="settings-actions">
+            <button id="exportBtn" class="tool-btn inline-tool" type="button"><span>♙</span>备份</button>
+            <button id="importBtn" class="tool-btn inline-tool" type="button"><span>▤</span>导入</button>
+            <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
+          </div>
         </header>
-        <div class="settings-actions">
-          <button id="exportBtn" class="tool-btn inline-tool" type="button"><span>♙</span>备份</button>
-          <button id="importBtn" class="tool-btn inline-tool" type="button"><span>▤</span>导入</button>
-          <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
-        </div>
         <div class="settings-filters">
           <label>
             <span>搜索</span>
