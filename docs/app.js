@@ -17,10 +17,12 @@ const colors = [
   "#8B5CF6",
   "#14B8A6"
 ];
+const iconChoices = ["🍽", "🍜", "🍔", "🍛", "🍣", "🍗", "🍲", "🥗", "🍱", "🍕", "🍟", "🧋", "🥐", "🍙", "🍤", "🥟", "🍞", "☕", "🌮", "🍝"];
 
 const state = loadState();
 let editingId = null;
 let selectedColor = colors[0];
+let selectedIcon = "";
 let rotation = 0;
 let initialVisibleDays = 7;
 
@@ -28,6 +30,9 @@ const wheel = document.querySelector("#wheel");
 const ctx = wheel.getContext("2d");
 const centerPickBtn = document.querySelector("#centerPickBtn");
 const addBtn = document.querySelector("#addBtn");
+const listNavBtn = document.querySelector("#listNavBtn");
+const settingsNavBtn = document.querySelector("#settingsNavBtn");
+const settingsAddBtn = document.querySelector("#settingsAddBtn");
 const exportBtn = document.querySelector("#exportBtn");
 const importBtn = document.querySelector("#importBtn");
 const backupInput = document.querySelector("#backupInput");
@@ -38,8 +43,10 @@ const resultLinks = document.querySelector("#resultLinks");
 const restaurantList = document.querySelector("#restaurantList");
 const historyList = document.querySelector("#historyList");
 const dialog = document.querySelector("#editorDialog");
+const settingsDialog = document.querySelector("#settingsDialog");
 const form = document.querySelector("#editorForm");
 const closeDialogBtn = document.querySelector("#closeDialogBtn");
+const closeSettingsBtn = document.querySelector("#closeSettingsBtn");
 const deleteBtn = document.querySelector("#deleteBtn");
 const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
@@ -48,6 +55,7 @@ const categoryInput = document.querySelector("#categoryInput");
 const daysInput = document.querySelector("#daysInput");
 const daysValue = document.querySelector("#daysValue");
 const enabledInput = document.querySelector("#enabledInput");
+const iconGrid = document.querySelector("#iconGrid");
 const colorGrid = document.querySelector("#colorGrid");
 
 if ("serviceWorker" in navigator) {
@@ -55,12 +63,19 @@ if ("serviceWorker" in navigator) {
 }
 
 addBtn.addEventListener("click", () => openEditor());
+listNavBtn.addEventListener("click", openSettings);
+settingsNavBtn.addEventListener("click", openSettings);
+settingsAddBtn.addEventListener("click", () => {
+  settingsDialog.close();
+  openEditor();
+});
 exportBtn.addEventListener("click", exportBackup);
 importBtn.addEventListener("click", () => backupInput.click());
 backupInput.addEventListener("change", importBackup);
 pickBtn.addEventListener("click", pickToday);
 centerPickBtn.addEventListener("click", pickToday);
 closeDialogBtn.addEventListener("click", () => dialog.close());
+closeSettingsBtn.addEventListener("click", () => settingsDialog.close());
 daysInput.addEventListener("input", () => {
   daysValue.textContent = daysLabel(Number(daysInput.value));
 });
@@ -90,6 +105,7 @@ form.addEventListener("submit", (event) => {
     name,
     note: noteInput.value.trim(),
     category: sanitizeCategory(categoryInput.value),
+    icon: sanitizeIcon(selectedIcon),
     colorHex: selectedColor,
     isEnabled: enabledInput.checked,
     profileUpdatedAt: new Date().toISOString(),
@@ -174,6 +190,7 @@ function normalizeRestaurant(restaurant) {
     name: sanitizeText(restaurant.name, 40),
     note: sanitizeText(restaurant.note, MAX_TEXT_LENGTH),
     category: sanitizeCategory(restaurant.category),
+    icon: sanitizeIcon(restaurant.icon),
     colorHex: colors.includes(restaurant.colorHex) ? restaurant.colorHex : colors[0],
     baseWeight: clampNumber(restaurant.baseWeight, 0.5, 5, 1),
     lastVisitedAt: restaurant.lastVisitedAt || null,
@@ -269,6 +286,11 @@ function sanitizeText(value, maxLength) {
 function sanitizeCategory(value) {
   const category = sanitizeText(value, 24).trim();
   return category || "未分类";
+}
+
+function sanitizeIcon(value) {
+  const icon = String(value || "").trim();
+  return iconChoices.includes(icon) ? icon : "";
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -560,6 +582,7 @@ function linkLabel(url) {
 function openEditor(restaurant = null) {
   editingId = restaurant?.id ?? null;
   selectedColor = restaurant?.colorHex ?? colors[0];
+  selectedIcon = restaurant?.icon || (restaurant ? foodIcon(restaurant) : iconChoices[0]);
   dialogTitle.textContent = restaurant ? "编辑店铺" : "添加店铺";
   nameInput.value = restaurant?.name ?? "";
   noteInput.value = restaurant?.note ?? "";
@@ -569,9 +592,30 @@ function openEditor(restaurant = null) {
   daysValue.textContent = daysLabel(Number(daysInput.value));
   enabledInput.checked = restaurant?.isEnabled ?? true;
   deleteBtn.hidden = !restaurant;
+  renderIconGrid();
   renderColorGrid();
   dialog.showModal();
   nameInput.focus();
+}
+
+function openSettings() {
+  renderRestaurants();
+  settingsDialog.showModal();
+}
+
+function renderIconGrid() {
+  iconGrid.replaceChildren(...iconChoices.map((icon) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `icon-choice${icon === selectedIcon ? " selected" : ""}`;
+    button.textContent = icon;
+    button.setAttribute("aria-label", `选择图标 ${icon}`);
+    button.addEventListener("click", () => {
+      selectedIcon = icon;
+      renderIconGrid();
+    });
+    return button;
+  }));
 }
 
 function renderColorGrid() {
@@ -614,7 +658,7 @@ function renderWheel() {
     ctx.fillStyle = segment.restaurant.colorHex;
     ctx.fill();
     ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
-    ctx.lineWidth = 8;
+    ctx.lineWidth = 5;
     ctx.stroke();
     drawWheelLabel(segment, start, end, center, radius);
     start = end;
@@ -623,7 +667,7 @@ function renderWheel() {
   ctx.beginPath();
   ctx.arc(center, center, radius - 4, 0, Math.PI * 2);
   ctx.strokeStyle = "rgba(17, 24, 39, 0.12)";
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 6;
   ctx.stroke();
 }
 
@@ -665,53 +709,87 @@ function renderRestaurants() {
     return;
   }
 
-  restaurantList.replaceChildren(...state.restaurants.map((restaurant) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "restaurant-card";
-    button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
-    button.addEventListener("click", () => openEditor(restaurant));
-
-    const avatar = document.createElement("span");
-    avatar.className = "restaurant-avatar";
-    avatar.style.background = restaurant.colorHex;
-    avatar.textContent = foodIcon(restaurant);
-
-    const main = document.createElement("span");
-    main.className = "restaurant-main";
-
-    const name = document.createElement("span");
-    name.className = "restaurant-name";
-    name.textContent = restaurant.name;
-
-    const meta = document.createElement("span");
-    meta.className = "restaurant-meta";
-    meta.textContent = `${restaurant.category} · ${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}%`;
-
-    const bar = document.createElement("span");
-    bar.className = "probability-bar";
-
-    const fill = document.createElement("span");
-    fill.style.width = `${Math.max(probabilityRatio(restaurant) * 100, restaurant.isEnabled ? 4 : 0)}%`;
-    fill.style.background = restaurant.colorHex;
-    bar.append(fill);
-
-    const arrow = document.createElement("span");
-    arrow.className = "row-arrow";
-    arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = "›";
-
-    main.append(name, meta, bar);
-    button.append(avatar, main, arrow);
-    return button;
-  }));
+  const groups = groupRestaurantsByCategory(state.restaurants);
+  restaurantList.replaceChildren(...groups.map(createRestaurantGroup));
 }
 
-function restaurantInitial(name) {
-  return [...String(name || "?").trim()][0]?.toUpperCase() || "?";
+function groupRestaurantsByCategory(restaurants) {
+  const groups = new Map();
+  for (const restaurant of restaurants) {
+    const key = restaurant.category || "未分类";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(restaurant);
+  }
+
+  return [...groups.entries()]
+    .map(([category, restaurants]) => ({
+      category,
+      restaurants: restaurants.slice().sort((a, b) => timeValue(b.visitedUpdatedAt) - timeValue(a.visitedUpdatedAt)),
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category, "zh-Hans-CN"));
+}
+
+function createRestaurantGroup(group) {
+  const section = document.createElement("section");
+  section.className = "restaurant-group";
+
+  const head = document.createElement("div");
+  head.className = "restaurant-group-head";
+
+  const title = document.createElement("strong");
+  title.textContent = group.category;
+
+  const count = document.createElement("span");
+  count.textContent = `${group.restaurants.length}家`;
+
+  head.append(title, count);
+  section.append(head, ...group.restaurants.map(createRestaurantCard));
+  return section;
+}
+
+function createRestaurantCard(restaurant) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "restaurant-card";
+  button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
+  button.addEventListener("click", () => openEditor(restaurant));
+
+  const avatar = document.createElement("span");
+  avatar.className = "restaurant-avatar";
+  avatar.style.background = restaurant.colorHex;
+  avatar.textContent = foodIcon(restaurant);
+
+  const main = document.createElement("span");
+  main.className = "restaurant-main";
+
+  const name = document.createElement("span");
+  name.className = "restaurant-name";
+  name.textContent = restaurant.name;
+
+  const meta = document.createElement("span");
+  meta.className = "restaurant-meta";
+  meta.textContent = `${visitStatus(restaurant)} · 概率 ${(probabilityRatio(restaurant) * 100).toFixed(0)}%`;
+
+  const bar = document.createElement("span");
+  bar.className = "probability-bar";
+
+  const fill = document.createElement("span");
+  fill.style.width = `${Math.max(probabilityRatio(restaurant) * 100, restaurant.isEnabled ? 4 : 0)}%`;
+  fill.style.background = restaurant.colorHex;
+  bar.append(fill);
+
+  const arrow = document.createElement("span");
+  arrow.className = "row-arrow";
+  arrow.setAttribute("aria-hidden", "true");
+  arrow.textContent = "›";
+
+  main.append(name, meta, bar);
+  button.append(avatar, main, arrow);
+  return button;
 }
 
 function foodIcon(restaurant) {
+  if (restaurant.icon) return restaurant.icon;
   const source = `${restaurant.category || ""} ${restaurant.name || ""}`.toLowerCase();
   const rules = [
     [["拉面", "麺", "ramen", "面"], "🍜"],

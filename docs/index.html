@@ -45,23 +45,18 @@
         <button id="pickBtn" class="primary-btn" type="button">🎉 开始抽取</button>
       </section>
 
-      <section class="section-head">
-        <h2>我的店铺</h2>
-        <span>越久没去，概率越高</span>
-      </section>
-      <div id="restaurantList" class="restaurant-list"></div>
-
       <section class="section-head history-head">
         <h2>最近记录</h2>
+        <span>店铺总览在设置里</span>
       </section>
       <div id="historyList" class="history-list"></div>
     </main>
 
     <nav class="bottom-nav" aria-label="主导航">
       <button class="active" type="button"><span>⌂</span>轮盘</button>
-      <button type="button"><span>▦</span>列表</button>
+      <button id="listNavBtn" type="button"><span>▦</span>列表</button>
       <button type="button"><span>▥</span>数据</button>
-      <button type="button"><span>⚙</span>设置</button>
+      <button id="settingsNavBtn" type="button"><span>⚙</span>设置</button>
     </nav>
 
     <dialog id="editorDialog">
@@ -97,6 +92,11 @@
         </label>
 
         <div>
+          <span class="field-title">食物图标</span>
+          <div id="iconGrid" class="icon-grid"></div>
+        </div>
+
+        <div>
           <span class="field-title">颜色</span>
           <div id="colorGrid" class="color-grid"></div>
         </div>
@@ -106,6 +106,22 @@
           <button class="primary-btn compact" type="submit">保存</button>
         </footer>
       </form>
+    </dialog>
+
+    <dialog id="settingsDialog">
+      <section class="settings-panel">
+        <header class="dialog-head">
+          <div>
+            <h2>设置</h2>
+            <p class="dialog-subtitle">按标签管理店铺</p>
+          </div>
+          <button id="closeSettingsBtn" class="text-btn" type="button">关闭</button>
+        </header>
+        <div class="settings-actions">
+          <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
+        </div>
+        <div id="restaurantList" class="restaurant-list settings-list"></div>
+      </section>
     </dialog>
 
     <script src="./app.js?v=14"></script>
