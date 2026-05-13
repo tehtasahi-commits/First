@@ -240,7 +240,7 @@ h2 {
   transform: translateX(-50%);
 }
 
-.result-panel,
+.result-modal,
 .restaurant-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -248,10 +248,8 @@ h2 {
   box-shadow: var(--soft-shadow);
 }
 
-.result-panel {
+.result-modal {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
   gap: 16px;
   padding: 18px;
   text-align: left;
@@ -467,7 +465,22 @@ h2 {
 
 .settings-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.inline-tool {
+  min-width: 76px;
+  min-height: 44px;
+  grid-auto-flow: column;
+  grid-template-columns: auto auto;
+  padding: 8px 12px;
+}
+
+.inline-tool span {
+  font-size: 20px;
 }
 
 .settings-list {
@@ -502,6 +515,55 @@ h2 {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 94px 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 92px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.timeline-item time {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.timeline-item strong {
+  min-width: 0;
+  padding-left: 14px;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.timeline-empty {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 82%);
 }
 
 .history-head {
@@ -694,6 +756,8 @@ textarea {
   .tool-btn,
   .restaurant-list,
   .restaurant-group,
+  .timeline-item,
+  .timeline-empty,
   .history-list,
   .bottom-nav {
     background: rgb(31 41 55 / 84%);

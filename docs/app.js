@@ -31,22 +31,26 @@ const ctx = wheel.getContext("2d");
 const centerPickBtn = document.querySelector("#centerPickBtn");
 const addBtn = document.querySelector("#addBtn");
 const listNavBtn = document.querySelector("#listNavBtn");
+const dataNavBtn = document.querySelector("#dataNavBtn");
 const settingsNavBtn = document.querySelector("#settingsNavBtn");
 const settingsAddBtn = document.querySelector("#settingsAddBtn");
 const exportBtn = document.querySelector("#exportBtn");
 const importBtn = document.querySelector("#importBtn");
 const backupInput = document.querySelector("#backupInput");
-const pickBtn = document.querySelector("#pickBtn");
 const resultLabel = document.querySelector("#resultLabel");
 const resultNote = document.querySelector("#resultNote");
 const resultLinks = document.querySelector("#resultLinks");
 const restaurantList = document.querySelector("#restaurantList");
 const historyList = document.querySelector("#historyList");
 const dialog = document.querySelector("#editorDialog");
+const resultDialog = document.querySelector("#resultDialog");
 const settingsDialog = document.querySelector("#settingsDialog");
+const dataDialog = document.querySelector("#dataDialog");
 const form = document.querySelector("#editorForm");
 const closeDialogBtn = document.querySelector("#closeDialogBtn");
+const closeResultBtn = document.querySelector("#closeResultBtn");
 const closeSettingsBtn = document.querySelector("#closeSettingsBtn");
+const closeDataBtn = document.querySelector("#closeDataBtn");
 const deleteBtn = document.querySelector("#deleteBtn");
 const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
@@ -57,6 +61,7 @@ const daysValue = document.querySelector("#daysValue");
 const enabledInput = document.querySelector("#enabledInput");
 const iconGrid = document.querySelector("#iconGrid");
 const colorGrid = document.querySelector("#colorGrid");
+const timelineList = document.querySelector("#timelineList");
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
@@ -64,6 +69,7 @@ if ("serviceWorker" in navigator) {
 
 addBtn.addEventListener("click", () => openEditor());
 listNavBtn.addEventListener("click", openSettings);
+dataNavBtn.addEventListener("click", openData);
 settingsNavBtn.addEventListener("click", openSettings);
 settingsAddBtn.addEventListener("click", () => {
   settingsDialog.close();
@@ -72,10 +78,11 @@ settingsAddBtn.addEventListener("click", () => {
 exportBtn.addEventListener("click", exportBackup);
 importBtn.addEventListener("click", () => backupInput.click());
 backupInput.addEventListener("change", importBackup);
-pickBtn.addEventListener("click", pickToday);
 centerPickBtn.addEventListener("click", pickToday);
 closeDialogBtn.addEventListener("click", () => dialog.close());
+closeResultBtn.addEventListener("click", () => resultDialog.close());
 closeSettingsBtn.addEventListener("click", () => settingsDialog.close());
+closeDataBtn.addEventListener("click", () => dataDialog.close());
 daysInput.addEventListener("input", () => {
   daysValue.textContent = daysLabel(Number(daysInput.value));
 });
@@ -437,9 +444,10 @@ function pickToday() {
   });
   state.history = state.history.slice(0, 50);
 
+  const result = state.restaurants[index] ?? picked;
   saveState();
-  renderResult(state.restaurants[index] ?? picked);
   render();
+  window.setTimeout(() => renderResult(result), 900);
 }
 
 function renderResult(restaurant) {
@@ -457,6 +465,8 @@ function renderResult(restaurant) {
     link.textContent = linkLabel(url);
     return link;
   }));
+
+  resultDialog.showModal();
 }
 
 function exportBackup() {
@@ -601,6 +611,11 @@ function openEditor(restaurant = null) {
 function openSettings() {
   renderRestaurants();
   settingsDialog.showModal();
+}
+
+function openData() {
+  renderTimeline();
+  dataDialog.showModal();
 }
 
 function renderIconGrid() {
@@ -832,8 +847,44 @@ function renderHistory() {
   }));
 }
 
+function renderTimeline() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const records = state.history
+    .filter((record) => {
+      const pickedAt = new Date(record.pickedAt);
+      return pickedAt >= monthStart && pickedAt < monthEnd;
+    })
+    .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt));
+
+  if (!records.length) {
+    const empty = document.createElement("p");
+    empty.className = "timeline-empty";
+    empty.textContent = "这个月还没有记录。";
+    timelineList.replaceChildren(empty);
+    return;
+  }
+
+  timelineList.replaceChildren(...records.map((record) => {
+    const item = document.createElement("div");
+    item.className = "timeline-item";
+
+    const pickedAt = new Date(record.pickedAt);
+    const date = document.createElement("time");
+    date.dateTime = record.pickedAt;
+    date.textContent = pickedAt.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "short" });
+
+    const name = document.createElement("strong");
+    name.textContent = record.restaurantName;
+
+    item.append(date, name);
+    return item;
+  }));
+}
+
 function render() {
-  pickBtn.disabled = !enabledRestaurants().length;
+  centerPickBtn.disabled = !enabledRestaurants().length;
   renderWheel();
   renderRestaurants();
   renderHistory();

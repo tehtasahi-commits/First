@@ -19,8 +19,6 @@
           <p class="subtitle">不知道吃什么？交给运气吧 🍴</p>
         </div>
         <div class="top-actions">
-          <button id="exportBtn" class="tool-btn" type="button"><span>♙</span>备份</button>
-          <button id="importBtn" class="tool-btn" type="button"><span>▤</span>导入</button>
           <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺"><span>+</span><small>添加</small></button>
         </div>
       </header>
@@ -30,19 +28,9 @@
         <div class="pointer"></div>
         <canvas id="wheel" width="720" height="720"></canvas>
         <button id="centerPickBtn" class="wheel-center" type="button" aria-label="点击抽取">
-          <span>🍴</span>
+          <span>🎉</span>
           <strong>点击抽取</strong>
         </button>
-      </section>
-
-      <section class="result-panel">
-        <div class="result-icon">✦</div>
-        <div class="result-copy">
-          <p id="resultLabel" class="result-label">今天吃什么？</p>
-          <p id="resultNote" class="result-note">让轮盘帮你做决定！</p>
-          <div id="resultLinks" class="result-links"></div>
-        </div>
-        <button id="pickBtn" class="primary-btn" type="button">🎉 开始抽取</button>
       </section>
 
       <section class="section-head history-head">
@@ -55,9 +43,23 @@
     <nav class="bottom-nav" aria-label="主导航">
       <button class="active" type="button"><span>⌂</span>轮盘</button>
       <button id="listNavBtn" type="button"><span>▦</span>列表</button>
-      <button type="button"><span>▥</span>数据</button>
+      <button id="dataNavBtn" type="button"><span>▥</span>数据</button>
       <button id="settingsNavBtn" type="button"><span>⚙</span>设置</button>
     </nav>
+
+    <dialog id="resultDialog">
+      <section class="result-modal">
+        <header class="dialog-head">
+          <div class="result-icon">🎉</div>
+          <button id="closeResultBtn" class="text-btn" type="button">关闭</button>
+        </header>
+        <div class="result-copy">
+          <p id="resultLabel" class="result-label">今天吃什么？</p>
+          <p id="resultNote" class="result-note">让轮盘帮你做决定！</p>
+          <div id="resultLinks" class="result-links"></div>
+        </div>
+      </section>
+    </dialog>
 
     <dialog id="editorDialog">
       <form id="editorForm" method="dialog" class="editor">
@@ -118,9 +120,24 @@
           <button id="closeSettingsBtn" class="text-btn" type="button">关闭</button>
         </header>
         <div class="settings-actions">
+          <button id="exportBtn" class="tool-btn inline-tool" type="button"><span>♙</span>备份</button>
+          <button id="importBtn" class="tool-btn inline-tool" type="button"><span>▤</span>导入</button>
           <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
         </div>
         <div id="restaurantList" class="restaurant-list settings-list"></div>
+      </section>
+    </dialog>
+
+    <dialog id="dataDialog">
+      <section class="settings-panel">
+        <header class="dialog-head">
+          <div>
+            <h2>本月时间轴</h2>
+            <p class="dialog-subtitle">记录这个月抽到并吃过的店铺</p>
+          </div>
+          <button id="closeDataBtn" class="text-btn" type="button">关闭</button>
+        </header>
+        <div id="timelineList" class="timeline-list"></div>
       </section>
     </dialog>
 
