@@ -397,6 +397,14 @@ h2 {
   max-height: 144px;
 }
 
+.restaurant-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.restaurant-row:last-child {
+  border-bottom: 0;
+}
+
 .restaurant-card {
   display: flex;
   align-items: center;
@@ -404,15 +412,12 @@ h2 {
   width: 100%;
   padding: 16px;
   border: 0;
-  border-bottom: 1px solid var(--line);
   border-radius: 0;
   box-shadow: none;
   text-align: left;
   transition: transform 150ms ease, border-color 150ms ease;
-}
-
-.restaurant-card:last-child {
-  border-bottom: 0;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .restaurant-card:active {
@@ -548,20 +553,35 @@ h2 {
 }
 
 .settings-list {
-  gap: 14px;
-  border: 0;
-  border-radius: 0;
+  gap: 0;
+  max-height: min(62vh, 760px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 82%);
+  box-shadow: var(--soft-shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.settings-list .restaurant-meta {
+  padding: 18px;
+}
+
+.settings-list .restaurant-group + .restaurant-group {
+  border-top: 1px solid var(--line);
+}
+
+.settings-list .restaurant-card {
   background: transparent;
-  box-shadow: none;
-  overflow: visible;
 }
 
 .restaurant-group {
   display: grid;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgb(255 255 255 / 82%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .restaurant-group-head {
@@ -851,6 +871,8 @@ h2 {
   align-items: stretch;
   gap: 8px;
   width: min(100%, 218px);
+  justify-self: center;
+  text-align: center;
 }
 
 .cache-cleaner span {
@@ -877,6 +899,7 @@ h2 {
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   width: min(100%, 218px);
+  justify-self: center;
 }
 
 .timeline-list {
@@ -885,7 +908,12 @@ h2 {
 }
 
 .history-cache-card .timeline-list {
+  max-height: 310px;
   min-height: 54px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
 }
 
 .timeline-item {

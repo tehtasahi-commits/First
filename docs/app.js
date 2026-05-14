@@ -890,8 +890,15 @@ function createRestaurantGroup(group) {
   count.textContent = `${group.restaurants.length}家`;
 
   head.append(title, count);
-  section.append(head, ...group.restaurants.map(createRestaurantCard));
+  section.append(head, ...group.restaurants.map(createRestaurantRow));
   return section;
+}
+
+function createRestaurantRow(restaurant) {
+  const row = document.createElement("div");
+  row.className = "restaurant-row";
+  row.append(createRestaurantCard(restaurant));
+  return row;
 }
 
 function createRestaurantCard(restaurant) {
@@ -899,7 +906,35 @@ function createRestaurantCard(restaurant) {
   button.type = "button";
   button.className = "restaurant-card";
   button.setAttribute("aria-disabled", String(!restaurant.isEnabled));
-  button.addEventListener("click", () => {
+  let longPressTimer = null;
+  let didLongPress = false;
+
+  button.addEventListener("pointerdown", () => {
+    didLongPress = false;
+    window.clearTimeout(longPressTimer);
+    longPressTimer = window.setTimeout(() => {
+      didLongPress = true;
+      deleteRestaurantFromList(restaurant);
+    }, 650);
+  });
+
+  for (const eventName of ["pointerup", "pointerleave", "pointercancel", "pointermove"]) {
+    button.addEventListener(eventName, () => {
+      window.clearTimeout(longPressTimer);
+    });
+  }
+
+  button.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    deleteRestaurantFromList(restaurant);
+  });
+
+  button.addEventListener("click", (event) => {
+    window.clearTimeout(longPressTimer);
+    if (didLongPress) {
+      event.preventDefault();
+      return;
+    }
     openEditor(restaurant);
   });
 
@@ -935,6 +970,17 @@ function createRestaurantCard(restaurant) {
   main.append(name, meta, bar);
   button.append(avatar, main, arrow);
   return button;
+}
+
+function deleteRestaurantFromList(restaurant) {
+  if (!restaurant?.id) return;
+  if (!window.confirm(`删除“${restaurant.name}”？历史记录不会删除。`)) return;
+  const index = state.restaurants.findIndex((item) => item.id === restaurant.id);
+  if (index < 0) return;
+  rememberDeletedRestaurant(restaurant.id);
+  state.restaurants.splice(index, 1);
+  saveState();
+  render();
 }
 
 function foodIcon(restaurant) {
