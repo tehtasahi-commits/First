@@ -870,7 +870,7 @@ h2 {
   grid-template-columns: 1fr;
   align-items: stretch;
   gap: 8px;
-  width: min(100%, 100px);
+  width: min(100%, 218px);
   justify-self: center;
   text-align: center;
 }
