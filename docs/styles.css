@@ -333,6 +333,56 @@ h2 {
   line-height: 1.35;
 }
 
+.candidate-list {
+  display: grid;
+  gap: 8px;
+}
+
+.candidate-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: inherit;
+  background: rgb(248 250 252 / 72%);
+  text-align: left;
+}
+
+.candidate-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 22px;
+}
+
+.candidate-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.candidate-main strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-main span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .cleanup-modal .cache-cleaner,
 .cleanup-modal .data-actions {
   width: min(100%, 218px);
@@ -786,8 +836,8 @@ h2 {
   grid-auto-columns: 48px;
   align-items: end;
   gap: 10px;
-  min-height: 142px;
-  padding: 6px 2px 2px;
+  min-height: 112px;
+  padding: 4px 2px 2px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
@@ -795,7 +845,7 @@ h2 {
 
 .month-bar-item {
   display: grid;
-  grid-template-rows: 18px 92px 28px 16px;
+  grid-template-rows: 16px 62px 26px 16px;
   justify-items: center;
   align-items: end;
   gap: 2px;
@@ -1130,13 +1180,14 @@ h2 {
   min-width: 0;
   padding-left: 14px;
   font-size: 17px;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .timeline-item.selection-mode strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .timeline-empty {

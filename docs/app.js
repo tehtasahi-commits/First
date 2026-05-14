@@ -16,6 +16,8 @@ const colors = [
   "#EF476F"
 ];
 const iconChoices = ["🍽", "🍜", "🍔", "🍛", "🍣", "🍗", "🍲", "🥗", "🍱", "🍕", "🍟", "🧋", "🥐", "🍙", "🍤", "🥟", "🍞", "☕", "🌮", "🍝"];
+const LOW_PROBABILITY_PICKER_THRESHOLD = 0.04;
+const WHEEL_CANDIDATE_LIMIT = 5;
 
 const state = loadState();
 let editingId = null;
@@ -51,6 +53,7 @@ const historyList = document.querySelector("#historyList");
 const dialog = document.querySelector("#editorDialog");
 const resultDialog = document.querySelector("#resultDialog");
 const restaurantDetailDialog = document.querySelector("#restaurantDetailDialog");
+const wheelCandidateDialog = document.querySelector("#wheelCandidateDialog");
 const tagManagerDialog = document.querySelector("#tagManagerDialog");
 const cleanupDialog = document.querySelector("#cleanupDialog");
 const form = document.querySelector("#editorForm");
@@ -58,6 +61,7 @@ const closeDialogBtn = document.querySelector("#closeDialogBtn");
 const closeResultBtn = document.querySelector("#closeResultBtn");
 const closeDetailBtn = document.querySelector("#closeDetailBtn");
 const editDetailBtn = document.querySelector("#editDetailBtn");
+const closeWheelCandidateBtn = document.querySelector("#closeWheelCandidateBtn");
 const closeTagManagerBtn = document.querySelector("#closeTagManagerBtn");
 const openCleanupBtn = document.querySelector("#openCleanupBtn");
 const closeCleanupBtn = document.querySelector("#closeCleanupBtn");
@@ -91,6 +95,7 @@ const detailName = document.querySelector("#detailName");
 const detailMeta = document.querySelector("#detailMeta");
 const detailNote = document.querySelector("#detailNote");
 const detailLinks = document.querySelector("#detailLinks");
+const wheelCandidateList = document.querySelector("#wheelCandidateList");
 let detailRestaurantId = null;
 
 if ("serviceWorker" in navigator) {
@@ -114,6 +119,7 @@ closeDialogBtn.addEventListener("click", () => dialog.close());
 closeResultBtn.addEventListener("click", () => resultDialog.close());
 closeDetailBtn.addEventListener("click", () => restaurantDetailDialog.close());
 editDetailBtn.addEventListener("click", editDetailRestaurant);
+closeWheelCandidateBtn.addEventListener("click", () => wheelCandidateDialog.close());
 closeTagManagerBtn.addEventListener("click", () => tagManagerDialog.close());
 openCleanupBtn.addEventListener("click", openCleanup);
 closeCleanupBtn.addEventListener("click", () => cleanupDialog.close());
@@ -418,6 +424,25 @@ function clampNumber(value, min, max, fallback) {
   return Math.min(Math.max(number, min), max);
 }
 
+function syncRestaurantVisitsFromHistory(restaurants, history, restaurantIDs, updatedAt = new Date().toISOString()) {
+  const ids = new Set([...restaurantIDs].filter(Boolean));
+  if (!ids.size) return 0;
+
+  let changed = 0;
+  for (const restaurant of restaurants) {
+    if (!ids.has(restaurant.id)) continue;
+    const latest = history
+      .filter((record) => record.restaurantID === restaurant.id)
+      .sort((a, b) => timeValue(b.pickedAt) - timeValue(a.pickedAt))[0] || null;
+    const nextVisitedAt = latest?.pickedAt || null;
+    if (restaurant.lastVisitedAt === nextVisitedAt) continue;
+    restaurant.lastVisitedAt = nextVisitedAt;
+    restaurant.visitedUpdatedAt = updatedAt;
+    changed += 1;
+  }
+  return changed;
+}
+
 function offsetDate(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -578,6 +603,46 @@ function probabilityRatio(restaurant) {
 
 function pickWeighted() {
   return pickByWeight(weightedSegments())?.restaurant ?? null;
+}
+
+function normalizeAngle(angle) {
+  const full = Math.PI * 2;
+  return ((angle % full) + full) % full;
+}
+
+function wheelSegmentsNearAngle(targetOffset, segments, limit = WHEEL_CANDIDATE_LIMIT) {
+  const ranges = segmentRanges(segments);
+  const smallRanges = ranges.filter((item) => item.segment.ratio <= LOW_PROBABILITY_PICKER_THRESHOLD);
+  const pool = smallRanges.length ? smallRanges : ranges;
+  return pool
+    .map((item) => ({
+      ...item,
+      distance: circularDistance(targetOffset, item.center),
+    }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, limit)
+    .map((item) => item.segment);
+}
+
+function segmentRanges(segments) {
+  let start = 0;
+  return segments.map((segment) => {
+    const span = Math.PI * 2 * segment.ratio;
+    const item = {
+      segment,
+      start,
+      end: start + span,
+      center: start + span / 2,
+    };
+    start += span;
+    return item;
+  });
+}
+
+function circularDistance(left, right) {
+  const full = Math.PI * 2;
+  const delta = Math.abs(normalizeAngle(left) - normalizeAngle(right));
+  return Math.min(delta, full - delta);
 }
 
 function pickByWeight(items) {
@@ -972,8 +1037,16 @@ function compactWheelName(restaurant) {
 }
 
 function handleWheelClick(event) {
-  const segment = wheelSegmentFromEvent(event);
-  if (segment) renderRestaurantDetail(segment.restaurant);
+  const hit = wheelSegmentFromEvent(event);
+  if (!hit) return;
+  if (hit.segment.ratio <= LOW_PROBABILITY_PICKER_THRESHOLD) {
+    const candidates = uniqueRestaurantSegments(wheelSegmentsNearAngle(hit.offset, hit.segments));
+    if (candidates.length > 1) {
+      renderWheelCandidatePicker(candidates);
+      return;
+    }
+  }
+  renderRestaurantDetail(hit.segment.restaurant);
 }
 
 function wheelSegmentFromEvent(event) {
@@ -995,14 +1068,53 @@ function wheelSegmentFromEvent(event) {
   let accumulated = 0;
   for (const segment of segments) {
     accumulated += Math.PI * 2 * segment.ratio;
-    if (offset <= accumulated) return segment;
+    if (offset <= accumulated) return { segment, offset, segments };
   }
-  return segments.at(-1) ?? null;
+  const segment = segments.at(-1) ?? null;
+  return segment ? { segment, offset, segments } : null;
 }
 
-function normalizeAngle(angle) {
-  const full = Math.PI * 2;
-  return ((angle % full) + full) % full;
+function uniqueRestaurantSegments(segments) {
+  const seen = new Set();
+  return segments.filter((segment) => {
+    if (seen.has(segment.restaurant.id)) return false;
+    seen.add(segment.restaurant.id);
+    return true;
+  });
+}
+
+function renderWheelCandidatePicker(segments) {
+  wheelCandidateList.replaceChildren(...segments.map(createWheelCandidateButton));
+  wheelCandidateDialog.showModal();
+}
+
+function createWheelCandidateButton(segment) {
+  const restaurant = segment.restaurant;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "candidate-row";
+  button.addEventListener("click", () => {
+    wheelCandidateDialog.close();
+    renderRestaurantDetail(restaurant);
+  });
+
+  const icon = document.createElement("span");
+  icon.className = "candidate-icon";
+  icon.style.background = restaurant.colorHex;
+  icon.textContent = foodIcon(restaurant);
+
+  const main = document.createElement("span");
+  main.className = "candidate-main";
+
+  const name = document.createElement("strong");
+  name.textContent = restaurant.name;
+
+  const meta = document.createElement("span");
+  meta.textContent = `${visitStatus(restaurant)} · 概率 ${(segment.ratio * 100).toFixed(1)}%`;
+
+  main.append(name, meta);
+  button.append(icon, main);
+  return button;
 }
 
 function renderTagManager() {
@@ -1491,7 +1603,7 @@ function createMonthBar(item, maxCount) {
 
   const bar = document.createElement("span");
   bar.className = "month-bar";
-  bar.style.height = `${Math.max(18, Math.round((item.count / maxCount) * 86))}px`;
+  bar.style.height = `${Math.max(16, Math.round((item.count / maxCount) * 58))}px`;
   bar.style.background = item.color;
 
   const icon = document.createElement("span");
@@ -1648,6 +1760,7 @@ function purgeHistoryBeforeDate() {
   if (!Number.isFinite(cutoff.getTime())) return;
 
   const beforeCount = state.history.length;
+  const removedRecords = state.history.filter((record) => timeValue(record.pickedAt) < cutoff.getTime());
   const remaining = state.history.filter((record) => timeValue(record.pickedAt) >= cutoff.getTime());
   const removed = beforeCount - remaining.length;
   if (!removed) {
@@ -1658,6 +1771,7 @@ function purgeHistoryBeforeDate() {
   if (!window.confirm(`将删除 ${removed} 条抽取历史记录，店铺和权重不会删除。继续吗？`)) return;
   state.historyDeletedBefore = cutoff.toISOString();
   state.history = remaining;
+  syncRestaurantVisitsFromHistory(state.restaurants, state.history, removedRecords.map((record) => record.restaurantID));
   selectedHistoryIDs.clear();
   historySelectionMode = false;
   saveState();
@@ -1679,12 +1793,14 @@ function deleteSelectedHistoryRecords() {
 
   if (!window.confirm(`将删除 ${removed} 条选中的抽取历史记录。继续吗？`)) return;
   const deletedAt = new Date().toISOString();
+  const removedRecords = state.history.filter((record) => ids.has(record.id));
   const existing = new Map((state.deletedHistoryRecords || []).map((record) => [record.id, record]));
   for (const id of ids) {
     existing.set(id, { id, deletedAt });
   }
   state.deletedHistoryRecords = [...existing.values()];
   state.history = state.history.filter((record) => !ids.has(record.id));
+  syncRestaurantVisitsFromHistory(state.restaurants, state.history, removedRecords.map((record) => record.restaurantID));
   selectedHistoryIDs.clear();
   historySelectionMode = false;
   saveState();
