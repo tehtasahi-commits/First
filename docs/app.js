@@ -39,6 +39,7 @@ const addBtn = document.querySelector("#addBtn");
 const dataNavBtn = document.querySelector("#dataNavBtn");
 const settingsNavBtn = document.querySelector("#settingsNavBtn");
 const settingsAddBtn = document.querySelector("#settingsAddBtn");
+const openTagManagerBtn = document.querySelector("#openTagManagerBtn");
 const exportBtn = document.querySelector("#exportBtn");
 const importBtn = document.querySelector("#importBtn");
 const backupInput = document.querySelector("#backupInput");
@@ -49,9 +50,17 @@ const restaurantList = document.querySelector("#restaurantList");
 const historyList = document.querySelector("#historyList");
 const dialog = document.querySelector("#editorDialog");
 const resultDialog = document.querySelector("#resultDialog");
+const restaurantDetailDialog = document.querySelector("#restaurantDetailDialog");
+const tagManagerDialog = document.querySelector("#tagManagerDialog");
+const cleanupDialog = document.querySelector("#cleanupDialog");
 const form = document.querySelector("#editorForm");
 const closeDialogBtn = document.querySelector("#closeDialogBtn");
 const closeResultBtn = document.querySelector("#closeResultBtn");
+const closeDetailBtn = document.querySelector("#closeDetailBtn");
+const editDetailBtn = document.querySelector("#editDetailBtn");
+const closeTagManagerBtn = document.querySelector("#closeTagManagerBtn");
+const openCleanupBtn = document.querySelector("#openCleanupBtn");
+const closeCleanupBtn = document.querySelector("#closeCleanupBtn");
 const deleteBtn = document.querySelector("#deleteBtn");
 const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
@@ -77,6 +86,12 @@ const purgeHistoryBtn = document.querySelector("#purgeHistoryBtn");
 const deleteSelectedHistoryBtn = document.querySelector("#deleteSelectedHistoryBtn");
 const selectedHistoryCount = document.querySelector("#selectedHistoryCount");
 const timelineList = document.querySelector("#timelineList");
+const detailIcon = document.querySelector("#detailIcon");
+const detailName = document.querySelector("#detailName");
+const detailMeta = document.querySelector("#detailMeta");
+const detailNote = document.querySelector("#detailNote");
+const detailLinks = document.querySelector("#detailLinks");
+let detailRestaurantId = null;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
@@ -89,12 +104,19 @@ settingsNavBtn.addEventListener("click", () => showPage("settings"));
 settingsAddBtn.addEventListener("click", () => {
   openEditor();
 });
+openTagManagerBtn.addEventListener("click", openTagManager);
 exportBtn.addEventListener("click", exportBackup);
 importBtn.addEventListener("click", () => backupInput.click());
 backupInput.addEventListener("change", importBackup);
 centerPickBtn.addEventListener("click", pickToday);
+wheel.addEventListener("click", handleWheelClick);
 closeDialogBtn.addEventListener("click", () => dialog.close());
 closeResultBtn.addEventListener("click", () => resultDialog.close());
+closeDetailBtn.addEventListener("click", () => restaurantDetailDialog.close());
+editDetailBtn.addEventListener("click", editDetailRestaurant);
+closeTagManagerBtn.addEventListener("click", () => tagManagerDialog.close());
+openCleanupBtn.addEventListener("click", openCleanup);
+closeCleanupBtn.addEventListener("click", () => cleanupDialog.close());
 purgeHistoryBtn.addEventListener("click", purgeHistoryBeforeDate);
 deleteSelectedHistoryBtn.addEventListener("click", deleteSelectedHistoryRecords);
 restaurantSearchInput.addEventListener("input", renderRestaurants);
@@ -601,7 +623,13 @@ function renderResult(restaurant) {
 
   resultLabel.textContent = restaurant.name;
   resultNote.textContent = noteText || "已记录为今天去过，之后概率会先降低，再随未去天数慢慢升高。";
-  resultLinks.replaceChildren(...links.map((url) => {
+  resultLinks.replaceChildren(...createLinkPills(links));
+
+  resultDialog.showModal();
+}
+
+function createLinkPills(links) {
+  return links.map((url) => {
     const link = document.createElement("a");
     link.href = url;
     link.target = "_blank";
@@ -609,9 +637,41 @@ function renderResult(restaurant) {
     link.className = "link-pill";
     link.textContent = linkLabel(url);
     return link;
-  }));
+  });
+}
 
-  resultDialog.showModal();
+function renderRestaurantDetail(restaurant) {
+  detailRestaurantId = restaurant.id;
+  const links = extractLinks(restaurant.note);
+  const noteText = stripLinks(restaurant.note);
+  const probability = (probabilityRatio(restaurant) * 100).toFixed(0);
+
+  detailIcon.textContent = foodIcon(restaurant);
+  detailIcon.style.background = restaurant.colorHex;
+  detailIcon.style.color = "#fff";
+  detailName.textContent = restaurant.name;
+  detailMeta.textContent = `${restaurant.category || "未分类"} · ${visitStatus(restaurant)} · 概率 ${probability}%`;
+  detailNote.textContent = noteText || "没有备注。";
+  detailLinks.replaceChildren(...createLinkPills(links));
+  restaurantDetailDialog.showModal();
+}
+
+function editDetailRestaurant() {
+  const restaurant = state.restaurants.find((item) => item.id === detailRestaurantId);
+  restaurantDetailDialog.close();
+  if (restaurant) openEditor(restaurant);
+}
+
+function openTagManager() {
+  renderTagManager();
+  tagManagerDialog.showModal();
+}
+
+function openCleanup() {
+  if (!purgeBeforeInput.value) {
+    purgeBeforeInput.value = new Date().toISOString().slice(0, 10);
+  }
+  cleanupDialog.showModal();
 }
 
 function exportBackup() {
@@ -751,7 +811,6 @@ function openEditor(restaurant = null) {
   renderIconGrid();
   renderColorGrid();
   dialog.showModal();
-  nameInput.focus();
 }
 
 function openSettings() {
@@ -864,8 +923,8 @@ function renderWheel() {
     ctx.closePath();
     ctx.fillStyle = segment.restaurant.colorHex;
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.72)";
+    ctx.lineWidth = 4;
     ctx.stroke();
     drawWheelLabel(segment, start, end, center, radius);
     start = end;
@@ -873,8 +932,14 @@ function renderWheel() {
 
   ctx.beginPath();
   ctx.arc(center, center, radius - 4, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(17, 24, 39, 0.12)";
-  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.62)";
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(center, center, radius - 16, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(17, 24, 39, 0.10)";
+  ctx.lineWidth = 3;
   ctx.stroke();
 }
 
@@ -903,8 +968,41 @@ function drawWheelLabel(segment, startAngle, endAngle, center, radius) {
 }
 
 function compactWheelName(restaurant) {
-  const text = restaurant.category && restaurant.category !== "未分类" ? restaurant.category : restaurant.name;
-  return [...String(text)].slice(0, 4).join("");
+  return [...String(restaurant.name || "店铺")].slice(0, 4).join("");
+}
+
+function handleWheelClick(event) {
+  const segment = wheelSegmentFromEvent(event);
+  if (segment) renderRestaurantDetail(segment.restaurant);
+}
+
+function wheelSegmentFromEvent(event) {
+  const segments = weightedSegments();
+  if (!segments.length) return null;
+
+  const rect = wheel.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const dx = event.clientX - centerX;
+  const dy = event.clientY - centerY;
+  const radius = Math.min(rect.width, rect.height) / 2;
+  const distance = Math.hypot(dx, dy);
+  if (distance > radius || distance < radius * 0.24) return null;
+
+  const visualAngle = Math.atan2(dy, dx);
+  const unrotatedAngle = visualAngle - (rotation % 360) * Math.PI / 180;
+  const offset = normalizeAngle(unrotatedAngle - (-Math.PI / 2));
+  let accumulated = 0;
+  for (const segment of segments) {
+    accumulated += Math.PI * 2 * segment.ratio;
+    if (offset <= accumulated) return segment;
+  }
+  return segments.at(-1) ?? null;
+}
+
+function normalizeAngle(angle) {
+  const full = Math.PI * 2;
+  return ((angle % full) + full) % full;
 }
 
 function renderTagManager() {
@@ -1331,10 +1429,15 @@ function renderHistoryStats() {
 }
 
 function renderDataAxis(period, records) {
-  axisTitle.textContent = selectedDataRange === "month" ? "本月坐标轴" : "本周坐标轴";
-  weekAxis.className = `week-axis ${selectedDataRange === "month" ? "month-axis" : ""}`;
+  axisTitle.textContent = selectedDataRange === "month" ? "本月总结" : "本周坐标轴";
+  if (selectedDataRange === "month") {
+    renderMonthlySummary(records);
+    return;
+  }
+
+  weekAxis.className = "week-axis";
   weekAxis.style.setProperty("--axis-days", String(period.days.length));
-  axisDetail.replaceChildren(createAxisHint(records.length ? "点击有数据的日期查看全部记录。" : "当前范围还没有数据点。"));
+  axisDetail.replaceChildren(...(records.length ? [] : [createAxisHint("当前范围还没有数据点。")]));
 
   const byDate = new Map(period.days.map((date) => [dateKey(date), []]));
   for (const record of records.slice().sort((a, b) => timeValue(a.pickedAt) - timeValue(b.pickedAt))) {
@@ -1343,6 +1446,79 @@ function renderDataAxis(period, records) {
   }
 
   weekAxis.replaceChildren(...period.days.map((date) => createAxisDay(date, byDate.get(dateKey(date)) || [])));
+}
+
+function renderMonthlySummary(records) {
+  weekAxis.className = "month-summary";
+  weekAxis.style.removeProperty("--axis-days");
+  axisDetail.replaceChildren(...(records.length ? [] : [createAxisHint("这个月还没有记录。")]));
+
+  const grouped = new Map();
+  for (const record of records) {
+    const key = record.restaurantID || record.restaurantName;
+    const restaurant = restaurantForRecord(record);
+    const existing = grouped.get(key) || {
+      name: record.restaurantName,
+      count: 0,
+      restaurant,
+      color: restaurant?.colorHex || colors[grouped.size % colors.length],
+      icon: foodIcon(restaurant || { name: record.restaurantName, category: "" }),
+    };
+    existing.count += 1;
+    if (!existing.restaurant && restaurant) {
+      existing.restaurant = restaurant;
+      existing.color = restaurant.colorHex;
+      existing.icon = foodIcon(restaurant);
+    }
+    grouped.set(key, existing);
+  }
+
+  const items = [...grouped.values()]
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-Hans-CN"))
+    .slice(0, 10);
+  const maxCount = Math.max(...items.map((item) => item.count), 1);
+  weekAxis.replaceChildren(...items.map((item) => createMonthBar(item, maxCount)));
+}
+
+function createMonthBar(item, maxCount) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "month-bar-item";
+  button.addEventListener("click", () => showMonthlySummaryDetail(item));
+
+  const count = document.createElement("strong");
+  count.textContent = `${item.count}`;
+
+  const bar = document.createElement("span");
+  bar.className = "month-bar";
+  bar.style.height = `${Math.max(18, Math.round((item.count / maxCount) * 86))}px`;
+  bar.style.background = item.color;
+
+  const icon = document.createElement("span");
+  icon.className = "month-bar-icon";
+  icon.textContent = item.icon;
+
+  const name = document.createElement("span");
+  name.className = "month-bar-name";
+  name.textContent = [...String(item.name)].slice(0, 4).join("");
+
+  button.append(count, bar, icon, name);
+  return button;
+}
+
+function showMonthlySummaryDetail(item) {
+  const detail = document.createElement("section");
+  detail.className = "axis-detail-card";
+
+  const title = document.createElement("strong");
+  title.textContent = `${item.name} · 本月 ${item.count} 次`;
+
+  const note = document.createElement("p");
+  note.className = "axis-hint";
+  note.textContent = item.restaurant ? `${item.restaurant.category || "未分类"} · ${visitStatus(item.restaurant)}` : "历史记录中的店铺";
+
+  detail.append(title, note);
+  axisDetail.replaceChildren(detail);
 }
 
 function createAxisDay(date, records) {
@@ -1487,6 +1663,7 @@ function purgeHistoryBeforeDate() {
   saveState();
   render();
   renderTimeline();
+  cleanupDialog.close();
 }
 
 function deleteSelectedHistoryRecords() {

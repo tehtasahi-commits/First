@@ -58,6 +58,10 @@ textarea {
   margin-bottom: 16px;
 }
 
+.compact-page-head {
+  margin-bottom: 10px;
+}
+
 .topbar {
   display: flex;
   flex-wrap: wrap;
@@ -184,8 +188,8 @@ h2 {
   position: relative;
   display: grid;
   place-items: center;
-  margin: 24px auto 18px;
-  width: min(84vw, 370px);
+  margin: 20px auto 16px;
+  width: min(88vw, 390px);
   aspect-ratio: 1;
 }
 
@@ -193,8 +197,9 @@ h2 {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 6px solid rgb(255 255 255 / 86%);
-  box-shadow: 0 22px 54px rgb(23 32 51 / 20%), inset 0 0 0 1px rgb(255 255 255 / 72%);
+  border: 4px solid rgb(255 255 255 / 88%);
+  box-shadow: 0 26px 62px rgb(23 32 51 / 26%), inset 0 0 0 2px rgb(255 255 255 / 70%), inset 0 -18px 32px rgb(17 24 39 / 12%);
+  cursor: pointer;
   transform: rotate(var(--rotation, 0deg));
   transition: transform 1100ms cubic-bezier(.12, .84, .24, 1);
 }
@@ -205,14 +210,14 @@ h2 {
   place-items: center;
   align-content: center;
   gap: 10px;
-  width: 96px;
-  height: 96px;
+  width: 86px;
+  height: 86px;
   border: 0;
   border-radius: 50%;
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 10px 24px rgb(23 32 51 / 15%), inset 0 0 0 1px var(--line);
-  font-size: 26px;
+  font-size: 24px;
   text-align: center;
 }
 
@@ -225,7 +230,7 @@ h2 {
 .wheel-center strong {
   display: block;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   line-height: .95;
   transform: translateY(-1px);
 }
@@ -265,6 +270,7 @@ h2 {
 }
 
 .result-modal,
+.detail-modal,
 .restaurant-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -275,6 +281,14 @@ h2 {
 .result-modal {
   display: grid;
   gap: 16px;
+  padding: 18px;
+  text-align: left;
+}
+
+.detail-modal {
+  display: grid;
+  gap: 14px;
+  width: min(92vw, 420px);
   padding: 18px;
   text-align: left;
 }
@@ -303,6 +317,30 @@ h2 {
   background: #fff1dd;
   font-size: 26px;
   font-weight: 900;
+}
+
+.detail-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-meta,
+.dialog-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.cleanup-modal .cache-cleaner,
+.cleanup-modal .data-actions {
+  width: min(100%, 218px);
+  justify-self: center;
+}
+
+.cleanup-modal .cache-cleaner {
+  text-align: center;
 }
 
 .result-copy {
@@ -356,6 +394,13 @@ h2 {
 
 .compact {
   min-height: 42px;
+}
+
+.compact-mini {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .danger-btn {
@@ -504,19 +549,20 @@ h2 {
 .settings-head .settings-actions {
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
 }
 
 .settings-head .inline-tool {
-  min-width: 54px;
+  min-width: 48px;
   min-height: 46px;
-  padding: 6px 8px;
+  padding: 6px;
+  font-size: 12px;
 }
 
 .settings-head .primary-btn {
   min-height: 46px;
-  padding: 0 12px;
+  padding: 0 10px;
 }
 
 .inline-tool {
@@ -537,13 +583,13 @@ h2 {
   gap: 10px;
 }
 
-.tag-manager-card {
-  margin: 12px 0;
-}
-
 .tag-list {
   display: grid;
   gap: 8px;
+  max-height: min(58vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .tag-empty {
@@ -652,8 +698,8 @@ h2 {
 
 .data-card {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgb(255 255 255 / 82%);
@@ -702,7 +748,7 @@ h2 {
 }
 
 .segmented-control button {
-  min-height: 34px;
+  min-height: 30px;
   border: 0;
   border-radius: 8px;
   color: var(--muted);
@@ -721,8 +767,8 @@ h2 {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0;
-  min-height: 132px;
-  padding: 4px 0 0;
+  min-height: 112px;
+  padding: 2px 0 0;
 }
 
 .week-axis.month-axis {
@@ -732,6 +778,65 @@ h2 {
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
+}
+
+.month-summary {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 48px;
+  align-items: end;
+  gap: 10px;
+  min-height: 142px;
+  padding: 6px 2px 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.month-bar-item {
+  display: grid;
+  grid-template-rows: 18px 92px 28px 16px;
+  justify-items: center;
+  align-items: end;
+  gap: 2px;
+  min-width: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.month-bar-item strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.month-bar {
+  width: 24px;
+  min-height: 18px;
+  border-radius: 999px 999px 6px 6px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 46%), 0 7px 14px rgb(23 32 51 / 16%);
+}
+
+.month-bar-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 5px 12px rgb(23 32 51 / 12%);
+  font-size: 16px;
+}
+
+.month-bar-name {
+  max-width: 44px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .week-axis.month-axis::before {
@@ -752,7 +857,7 @@ h2 {
 .axis-day {
   position: relative;
   display: grid;
-  grid-template-rows: 22px 66px 20px;
+  grid-template-rows: 18px 58px 18px;
   justify-items: center;
   min-width: 0;
   border: 0;
@@ -792,7 +897,7 @@ h2 {
 .axis-dots {
   position: absolute;
   left: 50%;
-  bottom: 28px;
+  bottom: 24px;
   display: grid;
   place-items: center;
   width: 40px;
@@ -855,7 +960,7 @@ h2 {
 }
 
 .axis-detail {
-  min-height: 34px;
+  min-height: 0;
 }
 
 .axis-hint {
@@ -1129,6 +1234,53 @@ h2 {
 .bottom-nav span {
   font-size: 24px;
   line-height: 1;
+}
+
+.nav-wheel-icon,
+.nav-data-icon {
+  position: relative;
+  display: block;
+  width: 25px;
+  height: 25px;
+  color: currentColor;
+}
+
+.nav-wheel-icon {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background:
+    linear-gradient(currentColor, currentColor) 50% 50% / 2px 19px no-repeat,
+    linear-gradient(90deg, currentColor, currentColor) 50% 50% / 19px 2px no-repeat,
+    linear-gradient(45deg, transparent 46%, currentColor 47% 53%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, currentColor 47% 53%, transparent 54%);
+}
+
+.nav-wheel-icon::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.nav-data-icon {
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  border-radius: 0 0 0 4px;
+}
+
+.nav-data-icon::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 1px;
+  top: 4px;
+  bottom: 5px;
+  background:
+    linear-gradient(135deg, transparent 0 28%, currentColor 29% 35%, transparent 36% 54%, currentColor 55% 61%, transparent 62%),
+    radial-gradient(circle at 13% 78%, currentColor 0 2px, transparent 2.5px),
+    radial-gradient(circle at 44% 46%, currentColor 0 2px, transparent 2.5px),
+    radial-gradient(circle at 78% 20%, currentColor 0 2px, transparent 2.5px);
 }
 
 .bottom-nav .active {
