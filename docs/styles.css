@@ -1331,6 +1331,8 @@ h2 {
 
 dialog {
   width: min(calc(100vw - 28px), 500px);
+  max-width: calc(100vw - 28px);
+  overflow-x: hidden;
   padding: 0;
   border: 0;
   border-radius: 12px;
@@ -1344,6 +1346,9 @@ dialog::backdrop {
 .editor {
   display: grid;
   gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   padding: 14px;
 }
 
@@ -1364,10 +1369,47 @@ label {
   font-weight: 700;
 }
 
+.editor-field {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.name-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .category-entry {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 132px;
   gap: 8px;
+}
+
+.inline-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 43px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: #fff;
+  white-space: nowrap;
+}
+
+.inline-switch span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 input[type="text"],
@@ -1405,8 +1447,13 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 380px) {
+  .name-entry,
   .category-entry {
     grid-template-columns: 1fr;
+  }
+
+  .inline-switch {
+    justify-content: space-between;
   }
 
   .data-actions,
@@ -1427,16 +1474,39 @@ textarea {
   font-weight: 700;
 }
 
+.choice-window {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(248 250 252 / 72%);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.icon-window {
+  height: 112px;
+  padding: 8px;
+}
+
+.color-window {
+  height: 52px;
+  padding: 8px;
+}
+
 .color-grid {
   display: grid;
   grid-auto-columns: 34px;
   grid-auto-flow: column;
   grid-template-rows: 34px;
   gap: 8px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  padding-bottom: 3px;
-  scrollbar-width: thin;
+  width: max-content;
+  min-width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 .icon-grid {
@@ -1445,10 +1515,10 @@ textarea {
   grid-auto-flow: column;
   grid-template-rows: repeat(2, 42px);
   gap: 8px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  padding-bottom: 3px;
-  scrollbar-width: thin;
+  width: max-content;
+  min-width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 .icon-choice {

@@ -952,7 +952,7 @@ function renderCategoryPresetSelect() {
   const current = sanitizeCategory(categoryInput.value);
   const categories = existingCategories();
   categoryPresetSelect.replaceChildren(
-    createOption("", categories.length ? "已有标签" : "暂无已有标签"),
+    createOption("", categories.length ? "选择标签" : "暂无标签"),
     ...categories.map((category) => createOption(category, category))
   );
   categoryPresetSelect.value = categories.includes(current) ? current : "";
