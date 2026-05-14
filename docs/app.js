@@ -534,6 +534,12 @@ function enabledRestaurants() {
   return state.restaurants.filter((item) => item.isEnabled);
 }
 
+function recordDisplayName(record, restaurants = state.restaurants) {
+  return restaurants.find((restaurant) => restaurant.id === record.restaurantID)?.name
+    || record.restaurantName
+    || "已删除店铺";
+}
+
 function firstRoundCandidates(candidates = enabledRestaurants()) {
   const directRestaurants = candidates
     .filter((restaurant) => restaurant.category === "未分类" || isNewRestaurant(restaurant))
@@ -1409,7 +1415,7 @@ function createHistoryItem(record, isDuplicate = false) {
   if (isDuplicate) item.setAttribute("aria-hidden", "true");
 
   const name = document.createElement("strong");
-  name.textContent = record.restaurantName;
+  name.textContent = recordDisplayName(record);
 
   const date = document.createElement("span");
   date.textContent = new Date(record.pickedAt).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
@@ -1455,7 +1461,7 @@ function createTimelineItem(record) {
   date.textContent = pickedAt.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "short" });
 
   const name = document.createElement("strong");
-  name.textContent = record.restaurantName;
+  name.textContent = recordDisplayName(record);
 
   if (historySelectionMode) {
     const checkbox = document.createElement("input");
@@ -1541,7 +1547,7 @@ function renderHistoryStats() {
 }
 
 function renderDataAxis(period, records) {
-  axisTitle.textContent = selectedDataRange === "month" ? "本月总结" : "本周坐标轴";
+  axisTitle.textContent = selectedDataRange === "month" ? "本月总结" : "本周总结";
   if (selectedDataRange === "month") {
     renderMonthlySummary(records);
     return;
@@ -1570,7 +1576,7 @@ function renderMonthlySummary(records) {
     const key = record.restaurantID || record.restaurantName;
     const restaurant = restaurantForRecord(record);
     const existing = grouped.get(key) || {
-      name: record.restaurantName,
+      name: recordDisplayName(record),
       count: 0,
       restaurant,
       color: restaurant?.colorHex || colors[grouped.size % colors.length],
@@ -1603,7 +1609,7 @@ function createMonthBar(item, maxCount) {
 
   const bar = document.createElement("span");
   bar.className = "month-bar";
-  bar.style.height = `${Math.max(16, Math.round((item.count / maxCount) * 58))}px`;
+  bar.style.height = `${Math.max(14, Math.round((item.count / maxCount) * 51))}px`;
   bar.style.background = item.color;
 
   const icon = document.createElement("span");
@@ -1679,8 +1685,8 @@ function createAxisDot(record) {
   const dot = document.createElement("span");
   dot.className = "axis-dot";
   dot.style.background = restaurant?.colorHex || "#63C5EA";
-  dot.title = record.restaurantName;
-  dot.setAttribute("aria-label", record.restaurantName);
+  dot.title = recordDisplayName(record);
+  dot.setAttribute("aria-label", recordDisplayName(record));
   dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
   return dot;
 }
@@ -1719,7 +1725,7 @@ function createAxisDetailItem(record) {
   dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
 
   const name = document.createElement("strong");
-  name.textContent = record.restaurantName;
+  name.textContent = recordDisplayName(record);
 
   const time = document.createElement("time");
   time.dateTime = record.pickedAt;
