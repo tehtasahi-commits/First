@@ -3,6 +3,8 @@ const MAX_BACKUP_BYTES = 250_000;
 const MAX_RESTAURANTS = 300;
 const MAX_HISTORY = 500;
 const MAX_TEXT_LENGTH = 500;
+const UNCATEGORIZED_CATEGORY = "无类别";
+const LEGACY_UNCATEGORIZED_CATEGORY = "未分类";
 const colors = [
   "#FF5A45",
   "#FF7A45",
@@ -47,11 +49,13 @@ const wheel = document.querySelector("#wheel");
 const ctx = wheel.getContext("2d");
 const roulettePage = document.querySelector("#roulettePage");
 const dataPage = document.querySelector("#dataPage");
+const shopsPage = document.querySelector("#shopsPage");
 const settingsPage = document.querySelector("#settingsPage");
 const rouletteNavBtn = document.querySelector("#rouletteNavBtn");
 const centerPickBtn = document.querySelector("#centerPickBtn");
 const addBtn = document.querySelector("#addBtn");
 const dataNavBtn = document.querySelector("#dataNavBtn");
+const shopsNavBtn = document.querySelector("#shopsNavBtn");
 const settingsNavBtn = document.querySelector("#settingsNavBtn");
 const settingsAddBtn = document.querySelector("#settingsAddBtn");
 const openTagManagerBtn = document.querySelector("#openTagManagerBtn");
@@ -122,6 +126,7 @@ if ("serviceWorker" in navigator) {
 addBtn.addEventListener("click", () => openEditor());
 rouletteNavBtn.addEventListener("click", () => showPage("roulette"));
 dataNavBtn.addEventListener("click", () => showPage("data"));
+shopsNavBtn.addEventListener("click", () => showPage("shops"));
 settingsNavBtn.addEventListener("click", () => showPage("settings"));
 settingsAddBtn.addEventListener("click", () => {
   openEditor();
@@ -394,7 +399,8 @@ function sanitizeText(value, maxLength) {
 
 function sanitizeCategory(value) {
   const category = sanitizeText(value, 24).trim();
-  return category || "未分类";
+  if (!category || category === LEGACY_UNCATEGORIZED_CATEGORY) return UNCATEGORIZED_CATEGORY;
+  return category;
 }
 
 function sanitizeIcon(value) {
@@ -410,7 +416,7 @@ function sanitizeColorHex(value) {
 function renameCategoryOnRestaurants(restaurants, fromCategory, toCategory) {
   const from = sanitizeCategory(fromCategory);
   const to = sanitizeCategory(toCategory);
-  if (from === "未分类" || from === to) return 0;
+  if (from === UNCATEGORIZED_CATEGORY || from === to) return 0;
   const now = new Date().toISOString();
   let changed = 0;
   for (const restaurant of restaurants) {
@@ -424,12 +430,12 @@ function renameCategoryOnRestaurants(restaurants, fromCategory, toCategory) {
 
 function deleteCategoryOnRestaurants(restaurants, category) {
   const target = sanitizeCategory(category);
-  if (target === "未分类") return 0;
+  if (target === UNCATEGORIZED_CATEGORY) return 0;
   const now = new Date().toISOString();
   let changed = 0;
   for (const restaurant of restaurants) {
     if (sanitizeCategory(restaurant.category) !== target) continue;
-    restaurant.category = "未分类";
+    restaurant.category = UNCATEGORIZED_CATEGORY;
     restaurant.profileUpdatedAt = now;
     changed += 1;
   }
@@ -545,7 +551,7 @@ function recentCategoryPenalty(category, restaurants) {
 }
 
 function categorySecondRoundRestaurants(category, candidates) {
-  return candidates.filter((item) => item.category === category && item.category !== "未分类" && !isNewRestaurant(item));
+  return candidates.filter((item) => item.category === category && item.category !== UNCATEGORIZED_CATEGORY && !isNewRestaurant(item));
 }
 
 function enabledRestaurants() {
@@ -560,7 +566,7 @@ function recordDisplayName(record, restaurants = state.restaurants) {
 
 function firstRoundCandidates(candidates = enabledRestaurants()) {
   const directRestaurants = candidates
-    .filter((restaurant) => restaurant.category === "未分类" || isNewRestaurant(restaurant))
+    .filter((restaurant) => restaurant.category === UNCATEGORIZED_CATEGORY || isNewRestaurant(restaurant))
     .map((restaurant) => ({
       type: "restaurant",
       restaurant,
@@ -569,7 +575,7 @@ function firstRoundCandidates(candidates = enabledRestaurants()) {
     }));
 
   const categories = [...new Set(candidates
-    .filter((restaurant) => restaurant.category !== "未分类" && !isNewRestaurant(restaurant))
+    .filter((restaurant) => restaurant.category !== UNCATEGORIZED_CATEGORY && !isNewRestaurant(restaurant))
     .map((restaurant) => restaurant.category))];
   const categoryGroups = categories
     .map((category) => ({
@@ -739,7 +745,7 @@ function renderRestaurantDetail(restaurant) {
   detailIcon.style.background = restaurant.colorHex;
   detailIcon.style.color = "#fff";
   detailName.textContent = restaurant.name;
-  detailMeta.textContent = `${restaurant.category || "未分类"} · ${visitStatus(restaurant)} · 概率 ${probability}%`;
+  detailMeta.textContent = `${restaurant.category || UNCATEGORIZED_CATEGORY} · ${visitStatus(restaurant)} · 概率 ${probability}%`;
   detailNote.textContent = noteText || "没有备注。";
   detailLinks.replaceChildren(...createLinkPills(links));
   restaurantDetailDialog.showModal();
@@ -903,7 +909,7 @@ function openEditor(restaurant = null) {
 }
 
 function openSettings() {
-  showPage("settings");
+  showPage("shops");
 }
 
 function openData() {
@@ -911,15 +917,17 @@ function openData() {
 }
 
 function showPage(page) {
-  activePage = ["roulette", "data", "settings"].includes(page) ? page : "roulette";
+  activePage = ["roulette", "data", "shops", "settings"].includes(page) ? page : "roulette";
   roulettePage.classList.toggle("active", activePage === "roulette");
   dataPage.classList.toggle("active", activePage === "data");
+  shopsPage.classList.toggle("active", activePage === "shops");
   settingsPage.classList.toggle("active", activePage === "settings");
   rouletteNavBtn.classList.toggle("active", activePage === "roulette");
   dataNavBtn.classList.toggle("active", activePage === "data");
+  shopsNavBtn.classList.toggle("active", activePage === "shops");
   settingsNavBtn.classList.toggle("active", activePage === "settings");
 
-  if (activePage === "settings") {
+  if (activePage === "shops") {
     renderRestaurantFilters();
     renderTagManager();
     renderRestaurants();
@@ -940,16 +948,16 @@ function setDataRange(range) {
 }
 
 function existingCategories() {
-  return [...new Set(state.restaurants.map((restaurant) => restaurant.category || "未分类"))]
+  return [...new Set(state.restaurants.map((restaurant) => sanitizeCategory(restaurant.category)))]
     .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 }
 
 function editableCategories() {
-  return existingCategories().filter((category) => category !== "未分类");
+  return existingCategories().filter((category) => category !== UNCATEGORIZED_CATEGORY);
 }
 
 function renderCategoryPresetSelect() {
-  const current = sanitizeCategory(categoryInput.value);
+  const current = categoryInput.value.trim() ? sanitizeCategory(categoryInput.value) : "";
   const categories = existingCategories();
   categoryPresetSelect.replaceChildren(
     createOption("", categories.length ? "选择标签" : "暂无标签"),
@@ -1256,7 +1264,7 @@ function renameCategory(category) {
 function deleteCategory(category) {
   const count = state.restaurants.filter((restaurant) => restaurant.category === category).length;
   if (!count) return;
-  if (!window.confirm(`将 ${count} 家“${category}”店铺改为未分类。店铺、历史和权重不会删除。继续吗？`)) return;
+  if (!window.confirm(`将 ${count} 家“${category}”店铺改为${UNCATEGORIZED_CATEGORY}。店铺、历史和权重不会删除。继续吗？`)) return;
   const changed = deleteCategoryOnRestaurants(state.restaurants, category);
   if (!changed) return;
   saveState();
@@ -1312,7 +1320,7 @@ function filteredRestaurants() {
 function groupRestaurantsByCategory(restaurants) {
   const groups = new Map();
   for (const restaurant of restaurants) {
-    const key = restaurant.category || "未分类";
+    const key = restaurant.category || UNCATEGORIZED_CATEGORY;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(restaurant);
   }
@@ -1706,7 +1714,7 @@ function showMonthlySummaryDetail(item) {
 
   const note = document.createElement("p");
   note.className = "axis-hint";
-  note.textContent = item.restaurant ? `${item.restaurant.category || "未分类"} · ${visitStatus(item.restaurant)}` : "历史记录中的店铺";
+  note.textContent = item.restaurant ? `${item.restaurant.category || UNCATEGORIZED_CATEGORY} · ${visitStatus(item.restaurant)}` : "历史记录中的店铺";
 
   detail.append(title, note);
   axisDetail.replaceChildren(detail);
@@ -1908,7 +1916,7 @@ function dateKey(date) {
 function render() {
   centerPickBtn.disabled = !enabledRestaurants().length;
   renderWheel();
-  if (activePage === "settings") {
+  if (activePage === "shops") {
     renderRestaurantFilters();
     renderTagManager();
   }
