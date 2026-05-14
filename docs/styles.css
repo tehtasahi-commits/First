@@ -73,13 +73,6 @@ textarea {
   padding-top: 4px;
 }
 
-.top-actions {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  margin-left: auto;
-}
-
 .title-block {
   flex: 1 1 132px;
   min-width: 0;
@@ -111,49 +104,6 @@ h2 {
   font-size: 18px;
 }
 
-.icon-btn {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  min-height: 56px;
-  border: 0;
-  border-radius: 14px;
-  color: #fff;
-  background: var(--primary);
-  box-shadow: 0 14px 28px rgb(23 32 51 / 24%);
-  font-size: 25px;
-  line-height: 1;
-}
-
-.tool-btn {
-  display: grid;
-  place-items: center;
-  gap: 5px;
-  min-width: 54px;
-  min-height: 68px;
-  border: 1px solid rgb(255 255 255 / 72%);
-  border-radius: 16px;
-  padding: 8px 10px;
-  color: var(--text);
-  background: rgb(255 255 255 / 78%);
-  box-shadow: 0 12px 26px rgb(23 32 51 / 10%);
-  font-size: 13px;
-  font-weight: 800;
-  backdrop-filter: blur(18px);
-}
-
-.tool-btn span {
-  color: var(--success);
-  font-size: 24px;
-  line-height: 1;
-}
-
-.icon-btn small {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-}
-
 @media (max-width: 380px) {
   h1 {
     font-size: 30px;
@@ -163,21 +113,6 @@ h2 {
     gap: 10px;
   }
 
-  .top-actions {
-    gap: 6px;
-  }
-
-  .icon-btn,
-  .tool-btn {
-    min-width: 44px;
-    min-height: 54px;
-    padding: 0 8px;
-    font-size: 12px;
-  }
-
-  .icon-btn {
-    width: 44px;
-  }
 }
 
 @media (min-width: 460px) {
@@ -608,28 +543,32 @@ h2 {
   margin-left: auto;
 }
 
-.settings-head .inline-tool {
-  min-width: 48px;
-  min-height: 46px;
-  padding: 6px;
-  font-size: 12px;
-}
-
-.settings-head .primary-btn {
-  min-height: 46px;
-  padding: 0 10px;
-}
-
-.inline-tool {
-  min-width: 76px;
-  min-height: 44px;
+.shop-add-btn {
+  display: inline-grid;
   grid-auto-flow: column;
   grid-template-columns: auto auto;
-  padding: 8px 12px;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 13px 0 10px;
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 12px 24px rgb(23 32 51 / 18%);
+  font-size: 13px;
+  font-weight: 900;
 }
 
-.inline-tool span {
-  font-size: 20px;
+.shop-add-btn span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 20%);
+  font-size: 22px;
+  line-height: 1;
 }
 
 .settings-filters {
@@ -1263,7 +1202,8 @@ h2 {
 
 .nav-wheel-icon,
 .nav-data-icon,
-.nav-shop-icon {
+.nav-shop-icon,
+.nav-settings-icon {
   position: relative;
   display: block;
   width: 25px;
@@ -1299,14 +1239,27 @@ h2 {
   content: "";
   position: absolute;
   left: 4px;
-  right: 1px;
-  top: 4px;
-  bottom: 5px;
-  background:
-    linear-gradient(135deg, transparent 0 28%, currentColor 29% 35%, transparent 36% 54%, currentColor 55% 61%, transparent 62%),
-    radial-gradient(circle at 13% 78%, currentColor 0 2px, transparent 2.5px),
-    radial-gradient(circle at 44% 46%, currentColor 0 2px, transparent 2.5px),
-    radial-gradient(circle at 78% 20%, currentColor 0 2px, transparent 2.5px);
+  bottom: 7px;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 2px transparent;
+  transform: rotate(-26deg);
+  transform-origin: left center;
+}
+
+.nav-data-icon::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: 11px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(26deg);
+  transform-origin: left center;
 }
 
 .nav-shop-icon {
@@ -1339,6 +1292,36 @@ h2 {
   border-radius: 4px 4px 0 0;
 }
 
+.nav-settings-icon {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.nav-settings-icon::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background:
+    linear-gradient(currentColor, currentColor) 50% 0 / 3px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 50% 100% / 3px 6px no-repeat,
+    linear-gradient(90deg, currentColor, currentColor) 0 50% / 6px 3px no-repeat,
+    linear-gradient(90deg, currentColor, currentColor) 100% 50% / 6px 3px no-repeat,
+    linear-gradient(45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 1px 1px / 8px 8px no-repeat,
+    linear-gradient(-45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 16px 1px / 8px 8px no-repeat,
+    linear-gradient(-45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 1px 16px / 8px 8px no-repeat,
+    linear-gradient(45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 16px 16px / 8px 8px no-repeat;
+}
+
+.nav-settings-icon::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--panel);
+}
+
 .bottom-nav .active {
   color: var(--primary);
 }
@@ -1358,6 +1341,80 @@ h2 {
 .version-card strong {
   color: var(--text);
   font-size: 26px;
+  line-height: 1;
+}
+
+.settings-tools-card {
+  gap: 8px;
+}
+
+.settings-tool-btn {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--text);
+  background: #fff;
+  font-weight: 900;
+  text-align: left;
+}
+
+.action-file-icon,
+.action-tag-icon {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  color: var(--primary);
+}
+
+.action-file-icon {
+  border: 2px solid currentColor;
+  border-radius: 5px;
+}
+
+.action-file-icon::before {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: -2px;
+  border-left: 8px solid transparent;
+  border-bottom: 8px solid currentColor;
+}
+
+.action-file-icon::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 12px;
+  width: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.action-export-icon::after {
+  box-shadow: 5px -4px 0 -1px currentColor, 5px 4px 0 -1px currentColor;
+  transform: translateX(2px);
+}
+
+.action-import-icon::after {
+  box-shadow: -5px -4px 0 -1px currentColor, -5px 4px 0 -1px currentColor;
+  transform: translateX(-2px);
+}
+
+.action-tag-icon {
+  display: grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  color: var(--success);
+  font-size: 20px;
+  font-weight: 900;
   line-height: 1;
 }
 

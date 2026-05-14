@@ -8,23 +8,23 @@ const UNCATEGORIZED_CATEGORY = "无类别";
 const LEGACY_UNCATEGORIZED_CATEGORY = "未分类";
 const colors = [
   "#FF5A45",
+  "#FF7043",
   "#FF7A45",
+  "#F9844A",
   "#FFA94D",
   "#FFC857",
+  "#FFD166",
+  "#F9C74F",
+  "#FFB703",
+  "#90BE6D",
   "#7ED6A5",
+  "#42C8A2",
   "#55CDBB",
   "#63C5EA",
-  "#A78BFA",
-  "#F47B6B",
-  "#EF476F",
-  "#F9844A",
-  "#F9C74F",
-  "#90BE6D",
-  "#43AA8B",
   "#4D96FF",
-  "#B8A1FF",
+  "#F47B6B",
   "#F15BB5",
-  "#B56576"
+  "#EF476F"
 ];
 const iconChoices = [
   "🍽", "🍜", "🥣", "🍲", "🥘", "🍛", "🍚", "🍙", "🍱", "🍣",
@@ -56,7 +56,6 @@ const shopsPage = document.querySelector("#shopsPage");
 const settingsPage = document.querySelector("#settingsPage");
 const rouletteNavBtn = document.querySelector("#rouletteNavBtn");
 const centerPickBtn = document.querySelector("#centerPickBtn");
-const addBtn = document.querySelector("#addBtn");
 const dataNavBtn = document.querySelector("#dataNavBtn");
 const shopsNavBtn = document.querySelector("#shopsNavBtn");
 const settingsNavBtn = document.querySelector("#settingsNavBtn");
@@ -130,7 +129,6 @@ if ("serviceWorker" in navigator) {
 bindEvents();
 
 function bindEvents() {
-  addBtn.addEventListener("click", () => openEditor());
   rouletteNavBtn.addEventListener("click", () => showPage("roulette"));
   dataNavBtn.addEventListener("click", () => showPage("data"));
   shopsNavBtn.addEventListener("click", () => showPage("shops"));
@@ -548,12 +546,27 @@ function categoryWeight(category, candidates) {
   const categoryRestaurants = categorySecondRoundRestaurants(category, candidates);
   if (!categoryRestaurants.length) return 0;
   const average = categoryRestaurants.reduce((sum, item) => sum + effectiveWeight(item), 0) / categoryRestaurants.length;
-  return Math.max(average, 0.1) * recentCategoryPenalty(category, categoryRestaurants);
+  return Math.max(average, 0.1) * recentCategoryPenalty(category, candidates);
 }
 
 function recentCategoryPenalty(category, restaurants) {
   const recentCount = restaurants.filter((item) => item.category === category && item.lastVisitedAt && daysSinceVisit(item) <= 3).length;
   return Math.pow(0.72, recentCount);
+}
+
+function newRestaurantSpreadPenalty(restaurant, candidates) {
+  if (restaurant.category === UNCATEGORIZED_CATEGORY) return 1;
+  const sameCategoryNewCount = candidates.filter((item) => item.category === restaurant.category && isNewRestaurant(item)).length;
+  return sameCategoryNewCount > 1 ? 1 / sameCategoryNewCount : 1;
+}
+
+function directRestaurantWeight(restaurant, candidates) {
+  let weight = effectiveWeight(restaurant);
+  if (isNewRestaurant(restaurant) && restaurant.category !== UNCATEGORIZED_CATEGORY) {
+    weight *= recentCategoryPenalty(restaurant.category, candidates);
+    weight *= newRestaurantSpreadPenalty(restaurant, candidates);
+  }
+  return Math.max(weight, 0.1);
 }
 
 function categorySecondRoundRestaurants(category, candidates) {
@@ -577,7 +590,7 @@ function firstRoundCandidates(candidates = enabledRestaurants()) {
       type: "restaurant",
       restaurant,
       category: restaurant.category,
-      weight: effectiveWeight(restaurant),
+      weight: directRestaurantWeight(restaurant, candidates),
     }));
 
   const categories = [...new Set(candidates
@@ -740,6 +753,14 @@ function createLinkPills(links) {
     link.textContent = linkLabel(url);
     return link;
   });
+}
+
+function createIconBadge(className, icon, color) {
+  const badge = document.createElement("span");
+  badge.className = className;
+  if (color) badge.style.background = color;
+  badge.textContent = icon;
+  return badge;
 }
 
 function renderRestaurantDetail(restaurant) {
@@ -1186,10 +1207,7 @@ function createWheelCandidateButton(segment) {
     renderRestaurantDetail(restaurant);
   });
 
-  const icon = document.createElement("span");
-  icon.className = "candidate-icon";
-  icon.style.background = restaurant.colorHex;
-  icon.textContent = foodIcon(restaurant);
+  const icon = createIconBadge("candidate-icon", foodIcon(restaurant), restaurant.colorHex);
 
   const main = document.createElement("span");
   main.className = "candidate-main";
@@ -1766,12 +1784,9 @@ function createAxisDay(date, records) {
 
 function createAxisDot(record) {
   const restaurant = restaurantForRecord(record);
-  const dot = document.createElement("span");
-  dot.className = "axis-dot";
-  dot.style.background = restaurant?.colorHex || "#63C5EA";
+  const dot = createIconBadge("axis-dot", foodIcon(restaurant || { name: record.restaurantName, category: "" }), restaurant?.colorHex || "#63C5EA");
   dot.title = recordDisplayName(record);
   dot.setAttribute("aria-label", recordDisplayName(record));
-  dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
   return dot;
 }
 
@@ -1795,10 +1810,7 @@ function createAxisDetailItem(record) {
   const item = document.createElement("div");
   item.className = "axis-detail-item";
 
-  const dot = document.createElement("span");
-  dot.className = "axis-detail-dot";
-  dot.style.background = restaurant?.colorHex || "#63C5EA";
-  dot.textContent = foodIcon(restaurant || { name: record.restaurantName, category: "" });
+  const dot = createIconBadge("axis-detail-dot", foodIcon(restaurant || { name: record.restaurantName, category: "" }), restaurant?.colorHex || "#63C5EA");
 
   const name = document.createElement("strong");
   name.textContent = recordDisplayName(record);

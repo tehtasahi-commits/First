@@ -1,9 +1,9 @@
-const CACHE_NAME = "lunch-roulette-cache-v14";
+const CACHE_NAME = "lunch-roulette-cache-v15.1.0";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=14",
-  "./app.js?v=14",
+  "./styles.css?v=15.1.0",
+  "./app.js?v=15.1.0",
   "./manifest.webmanifest",
   "./icon.svg",
 ];

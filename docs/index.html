@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="午餐轮盘" />
     <title>午餐轮盘</title>
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=14" />
+    <link rel="stylesheet" href="./styles.css?v=15.1.0" />
   </head>
   <body>
     <main class="app-shell">
@@ -19,9 +19,6 @@
         <div class="title-block">
           <h1>午餐轮盘</h1>
           <p class="subtitle">不知道吃什么？交给运气吧 🍴</p>
-        </div>
-        <div class="top-actions">
-          <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺"><span>+</span><small>添加</small></button>
         </div>
       </header>
       <input id="backupInput" type="file" accept="application/json,.json" hidden />
@@ -79,10 +76,7 @@
             <h1>店铺</h1>
           </div>
           <div class="settings-actions">
-            <button id="exportBtn" class="tool-btn inline-tool" type="button"><span>♙</span>备份</button>
-            <button id="importBtn" class="tool-btn inline-tool" type="button"><span>▤</span>导入</button>
-            <button id="openTagManagerBtn" class="tool-btn inline-tool" type="button"><span>⌗</span>标签</button>
-            <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
+            <button id="settingsAddBtn" class="shop-add-btn" type="button"><span>+</span>添加店铺</button>
           </div>
         </header>
         <div class="settings-filters">
@@ -105,7 +99,12 @@
         </header>
         <section class="data-card version-card">
           <span>当前版本</span>
-          <strong>v15.0.0</strong>
+          <strong>v15.1.0</strong>
+        </section>
+        <section class="data-card settings-tools-card">
+          <button id="exportBtn" class="settings-tool-btn" type="button"><span class="action-file-icon action-export-icon" aria-hidden="true"></span>备份店铺数据</button>
+          <button id="importBtn" class="settings-tool-btn" type="button"><span class="action-file-icon action-import-icon" aria-hidden="true"></span>导入店铺数据</button>
+          <button id="openTagManagerBtn" class="settings-tool-btn" type="button"><span class="action-tag-icon" aria-hidden="true">#</span>编辑现有标签</button>
         </section>
       </section>
     </main>
@@ -115,7 +114,7 @@
       <button id="rouletteNavBtn" class="active" type="button"><span class="nav-wheel-icon" aria-hidden="true"></span>轮盘</button>
       <button id="dataNavBtn" type="button"><span class="nav-data-icon" aria-hidden="true"></span>数据</button>
       <button id="shopsNavBtn" type="button"><span class="nav-shop-icon" aria-hidden="true"></span>店铺</button>
-      <button id="settingsNavBtn" type="button"><span>⚙</span>设置</button>
+      <button id="settingsNavBtn" type="button"><span class="nav-settings-icon" aria-hidden="true"></span>设置</button>
     </nav>
 
     <!-- Dialogs -->
@@ -262,6 +261,6 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=14"></script>
+    <script src="./app.js?v=15.1.0"></script>
   </body>
 </html>
