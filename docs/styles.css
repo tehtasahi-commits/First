@@ -1195,131 +1195,15 @@ h2 {
   font-weight: 800;
 }
 
-.bottom-nav span {
-  font-size: 24px;
-  line-height: 1;
-}
-
-.nav-wheel-icon,
-.nav-data-icon,
-.nav-shop-icon,
-.nav-settings-icon {
-  position: relative;
+.nav-char {
   display: block;
   width: 25px;
   height: 25px;
   color: currentColor;
-}
-
-.nav-wheel-icon {
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  background:
-    linear-gradient(currentColor, currentColor) 50% 50% / 2px 19px no-repeat,
-    linear-gradient(90deg, currentColor, currentColor) 50% 50% / 19px 2px no-repeat,
-    linear-gradient(45deg, transparent 46%, currentColor 47% 53%, transparent 54%),
-    linear-gradient(-45deg, transparent 46%, currentColor 47% 53%, transparent 54%);
-}
-
-.nav-wheel-icon::after {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.nav-data-icon {
-  border-left: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  border-radius: 0 0 0 4px;
-}
-
-.nav-data-icon::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  bottom: 7px;
-  width: 10px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0 2px transparent;
-  transform: rotate(-26deg);
-  transform-origin: left center;
-}
-
-.nav-data-icon::after {
-  content: "";
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  width: 11px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-  transform: rotate(26deg);
-  transform-origin: left center;
-}
-
-.nav-shop-icon {
-  border: 2px solid currentColor;
-  border-radius: 5px 5px 7px 7px;
-}
-
-.nav-shop-icon::before {
-  content: "";
-  position: absolute;
-  left: -2px;
-  right: -2px;
-  top: -2px;
-  height: 9px;
-  border: 2px solid currentColor;
-  border-radius: 5px 5px 3px 3px;
-  background:
-    linear-gradient(90deg, currentColor 0 2px, transparent 2px 7px, currentColor 7px 9px, transparent 9px 14px, currentColor 14px 16px, transparent 16px);
-}
-
-.nav-shop-icon::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  bottom: 0;
-  width: 7px;
-  height: 9px;
-  border: 2px solid currentColor;
-  border-bottom: 0;
-  border-radius: 4px 4px 0 0;
-}
-
-.nav-settings-icon {
-  border: 2px solid currentColor;
-  border-radius: 50%;
-}
-
-.nav-settings-icon::before {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background:
-    linear-gradient(currentColor, currentColor) 50% 0 / 3px 6px no-repeat,
-    linear-gradient(currentColor, currentColor) 50% 100% / 3px 6px no-repeat,
-    linear-gradient(90deg, currentColor, currentColor) 0 50% / 6px 3px no-repeat,
-    linear-gradient(90deg, currentColor, currentColor) 100% 50% / 6px 3px no-repeat,
-    linear-gradient(45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 1px 1px / 8px 8px no-repeat,
-    linear-gradient(-45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 16px 1px / 8px 8px no-repeat,
-    linear-gradient(-45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 1px 16px / 8px 8px no-repeat,
-    linear-gradient(45deg, transparent 43%, currentColor 44% 56%, transparent 57%) 16px 16px / 8px 8px no-repeat;
-}
-
-.nav-settings-icon::after {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  background: var(--panel);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
 }
 
 .bottom-nav .active {
@@ -1363,57 +1247,16 @@ h2 {
   text-align: left;
 }
 
-.action-file-icon,
-.action-tag-icon {
-  position: relative;
-  display: block;
-  width: 28px;
-  height: 28px;
-  color: var(--primary);
-}
-
-.action-file-icon {
-  border: 2px solid currentColor;
-  border-radius: 5px;
-}
-
-.action-file-icon::before {
-  content: "";
-  position: absolute;
-  right: -2px;
-  top: -2px;
-  border-left: 8px solid transparent;
-  border-bottom: 8px solid currentColor;
-}
-
-.action-file-icon::after {
-  content: "";
-  position: absolute;
-  left: 7px;
-  top: 12px;
-  width: 13px;
-  height: 2px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-.action-export-icon::after {
-  box-shadow: 5px -4px 0 -1px currentColor, 5px 4px 0 -1px currentColor;
-  transform: translateX(2px);
-}
-
-.action-import-icon::after {
-  box-shadow: -5px -4px 0 -1px currentColor, -5px 4px 0 -1px currentColor;
-  transform: translateX(-2px);
-}
-
-.action-tag-icon {
+.tool-char {
   display: grid;
   place-items: center;
-  border: 2px solid currentColor;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  color: var(--success);
-  font-size: 20px;
+  color: var(--primary);
+  background: #fff8ef;
+  font-size: 21px;
   font-weight: 900;
   line-height: 1;
 }
