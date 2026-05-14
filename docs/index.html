@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="theme-color" content="#FF5A45" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="午餐轮盘" />
+    <title>午餐轮盘</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css?v=14" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="roulettePage" class="app-page active">
+      <header class="topbar">
+        <div class="title-block">
+          <h1>午餐轮盘</h1>
+          <p class="subtitle">不知道吃什么？交给运气吧 🍴</p>
+        </div>
+        <div class="top-actions">
+          <button id="addBtn" class="icon-btn" type="button" aria-label="添加店铺"><span>+</span><small>添加</small></button>
+        </div>
+      </header>
+      <input id="backupInput" type="file" accept="application/json,.json" hidden />
+
+      <section class="wheel-area" aria-label="午餐轮盘">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="720" height="720"></canvas>
+        <button id="centerPickBtn" class="wheel-center" type="button" aria-label="点击抽取">
+          <span>🎉</span>
+          <strong>点击抽取</strong>
+        </button>
+      </section>
+
+      <section class="section-head history-head">
+        <h2>最近记录</h2>
+        <span>近7天</span>
+      </section>
+      <div id="historyList" class="history-list"></div>
+      </section>
+
+      <section id="dataPage" class="app-page">
+        <header class="page-head">
+          <div>
+            <h1>数据</h1>
+            <p class="subtitle">管理抽取历史缓存</p>
+          </div>
+        </header>
+        <section class="data-card">
+          <div class="data-card-head">
+            <h3 id="axisTitle">本周坐标轴</h3>
+            <span id="historyStats">0条记录</span>
+          </div>
+          <div class="segmented-control" aria-label="选择数据范围">
+            <button id="weekRangeBtn" class="active" type="button">周</button>
+            <button id="monthRangeBtn" type="button">月</button>
+          </div>
+          <div id="weekAxis" class="week-axis"></div>
+          <div id="axisDetail" class="axis-detail"></div>
+        </section>
+        <section class="data-card history-cache-card">
+          <div class="data-card-head">
+            <h3>历史缓存</h3>
+            <div class="history-select-tools">
+              <span id="selectedHistoryCount" hidden></span>
+              <button id="deleteSelectedHistoryBtn" class="danger-btn compact" type="button" hidden>删除选中</button>
+            </div>
+          </div>
+          <div id="timelineList" class="timeline-list"></div>
+        </section>
+        <section class="data-card history-cleanup-card">
+          <h3>清理历史</h3>
+          <label class="cache-cleaner">
+            <span>将此日期以前的记录清除</span>
+            <input id="purgeBeforeInput" type="date" />
+          </label>
+          <div class="data-actions">
+            <button id="purgeHistoryBtn" class="danger-btn compact" type="button">删除</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="settingsPage" class="app-page">
+        <header class="page-head settings-head">
+          <div>
+            <h1>设置</h1>
+            <p class="subtitle">按标签管理店铺</p>
+          </div>
+          <div class="settings-actions">
+            <button id="exportBtn" class="tool-btn inline-tool" type="button"><span>♙</span>备份</button>
+            <button id="importBtn" class="tool-btn inline-tool" type="button"><span>▤</span>导入</button>
+            <button id="settingsAddBtn" class="primary-btn compact" type="button">添加店铺</button>
+          </div>
+        </header>
+        <div class="settings-filters">
+          <label>
+            <span>搜索</span>
+            <input id="restaurantSearchInput" type="search" maxlength="40" placeholder="店名、标签或备注" />
+          </label>
+          <label>
+            <span>标签</span>
+            <select id="categoryFilterSelect"></select>
+          </label>
+        </div>
+        <section class="data-card tag-manager-card">
+          <div class="data-card-head">
+            <h3>标签管理</h3>
+            <span>按店铺自动生成</span>
+          </div>
+          <div id="tagList" class="tag-list"></div>
+        </section>
+        <div id="restaurantList" class="restaurant-list settings-list"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button id="rouletteNavBtn" class="active" type="button"><span>⌂</span>轮盘</button>
+      <button id="dataNavBtn" type="button"><span>▥</span>数据</button>
+      <button id="settingsNavBtn" type="button"><span>⚙</span>设置</button>
+    </nav>
+
+    <dialog id="resultDialog">
+      <section class="result-modal">
+        <header class="dialog-head">
+          <div class="result-icon">🎉</div>
+          <button id="closeResultBtn" class="text-btn" type="button">关闭</button>
+        </header>
+        <div class="result-copy">
+          <p id="resultLabel" class="result-label">今天吃什么？</p>
+          <p id="resultNote" class="result-note">让轮盘帮你做决定！</p>
+          <div id="resultLinks" class="result-links"></div>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog id="editorDialog">
+      <form id="editorForm" method="dialog" class="editor">
+        <header class="dialog-head">
+          <h2 id="dialogTitle">添加店铺</h2>
+          <button id="closeDialogBtn" class="text-btn" type="button">取消</button>
+        </header>
+
+        <label>
+          <span>店名</span>
+          <input id="nameInput" required maxlength="40" autocomplete="off" />
+        </label>
+
+        <label>
+          <span>备注或链接</span>
+          <textarea id="noteInput" rows="4" maxlength="500" placeholder="粘贴 Google Maps 链接，可自动填入部分店名"></textarea>
+        </label>
+
+        <label>
+          <span>标签（料理类型）</span>
+          <div class="category-entry">
+            <input id="categoryInput" maxlength="24" autocomplete="off" placeholder="例如：咖喱、汉堡、拉面" />
+            <select id="categoryPresetSelect" aria-label="选择已有标签"></select>
+          </div>
+        </label>
+
+        <label>
+          <span>上次吃过 <strong id="daysValue">7天以上</strong></span>
+          <input id="daysInput" type="range" min="0" max="7" step="1" value="7" />
+        </label>
+
+        <label class="switch-row">
+          <span>参与抽取</span>
+          <input id="enabledInput" type="checkbox" checked />
+        </label>
+
+        <div>
+          <span class="field-title">食物图标</span>
+          <div id="iconGrid" class="icon-grid"></div>
+        </div>
+
+        <div>
+          <span class="field-title">颜色</span>
+          <div id="colorGrid" class="color-grid"></div>
+        </div>
+
+        <footer class="dialog-actions">
+          <button id="deleteBtn" class="danger-btn" type="button">删除</button>
+          <button class="primary-btn compact" type="submit">保存</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="./app.js?v=14"></script>
+  </body>
+</html>
