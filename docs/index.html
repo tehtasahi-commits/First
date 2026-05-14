@@ -88,7 +88,7 @@
             <input id="restaurantSearchInput" type="search" maxlength="40" placeholder="店名、标签或备注" />
           </label>
           <label>
-            <span>标签</span>
+            <span>筛选</span>
             <select id="categoryFilterSelect"></select>
           </label>
         </div>
@@ -178,6 +178,16 @@
       </section>
     </dialog>
 
+    <dialog id="axisDetailDialog">
+      <section class="detail-modal">
+        <header class="dialog-head">
+          <h2 id="axisDialogTitle">当天记录</h2>
+          <button id="closeAxisDetailBtn" class="text-btn" type="button">关闭</button>
+        </header>
+        <div id="axisDialogContent" class="axis-detail-list"></div>
+      </section>
+    </dialog>
+
     <dialog id="editorDialog">
       <form id="editorForm" method="dialog" class="editor">
         <header class="dialog-head">
@@ -192,7 +202,7 @@
 
         <label>
           <span>备注或链接</span>
-          <textarea id="noteInput" rows="4" maxlength="500" placeholder="粘贴 Google Maps 链接，可自动填入部分店名"></textarea>
+          <textarea id="noteInput" rows="3" maxlength="500" placeholder="粘贴 Google Maps 链接，可自动填入部分店名"></textarea>
         </label>
 
         <label>

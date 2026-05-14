@@ -13,9 +13,22 @@ const colors = [
   "#63C5EA",
   "#A78BFA",
   "#F47B6B",
-  "#EF476F"
+  "#EF476F",
+  "#F9844A",
+  "#F9C74F",
+  "#90BE6D",
+  "#43AA8B",
+  "#4D96FF",
+  "#B8A1FF",
+  "#F15BB5",
+  "#B56576"
 ];
-const iconChoices = ["🍽", "🍜", "🍔", "🍛", "🍣", "🍗", "🍲", "🥗", "🍱", "🍕", "🍟", "🧋", "🥐", "🍙", "🍤", "🥟", "🍞", "☕", "🌮", "🍝"];
+const iconChoices = [
+  "🍽", "🍜", "🥣", "🍲", "🥘", "🍛", "🍚", "🍙", "🍱", "🍣",
+  "🍤", "🥟", "🍢", "🍡", "🥗", "🥙", "🥪", "🌯", "🌮", "🍝",
+  "🍔", "🍕", "🍟", "🌭", "🍗", "🍖", "🥩", "🧆", "🫔", "🫕",
+  "🥐", "🥖", "🍞", "🥯", "🍰", "🍮", "🍦", "☕", "🍵", "🧋", "🥤"
+];
 const LOW_PROBABILITY_PICKER_THRESHOLD = 0.04;
 const WHEEL_CANDIDATE_LIMIT = 5;
 
@@ -56,6 +69,7 @@ const restaurantDetailDialog = document.querySelector("#restaurantDetailDialog")
 const wheelCandidateDialog = document.querySelector("#wheelCandidateDialog");
 const tagManagerDialog = document.querySelector("#tagManagerDialog");
 const cleanupDialog = document.querySelector("#cleanupDialog");
+const axisDetailDialog = document.querySelector("#axisDetailDialog");
 const form = document.querySelector("#editorForm");
 const closeDialogBtn = document.querySelector("#closeDialogBtn");
 const closeResultBtn = document.querySelector("#closeResultBtn");
@@ -65,6 +79,7 @@ const closeWheelCandidateBtn = document.querySelector("#closeWheelCandidateBtn")
 const closeTagManagerBtn = document.querySelector("#closeTagManagerBtn");
 const openCleanupBtn = document.querySelector("#openCleanupBtn");
 const closeCleanupBtn = document.querySelector("#closeCleanupBtn");
+const closeAxisDetailBtn = document.querySelector("#closeAxisDetailBtn");
 const deleteBtn = document.querySelector("#deleteBtn");
 const dialogTitle = document.querySelector("#dialogTitle");
 const nameInput = document.querySelector("#nameInput");
@@ -85,6 +100,8 @@ const weekAxis = document.querySelector("#weekAxis");
 const axisDetail = document.querySelector("#axisDetail");
 const weekRangeBtn = document.querySelector("#weekRangeBtn");
 const monthRangeBtn = document.querySelector("#monthRangeBtn");
+const axisDialogTitle = document.querySelector("#axisDialogTitle");
+const axisDialogContent = document.querySelector("#axisDialogContent");
 const purgeBeforeInput = document.querySelector("#purgeBeforeInput");
 const purgeHistoryBtn = document.querySelector("#purgeHistoryBtn");
 const deleteSelectedHistoryBtn = document.querySelector("#deleteSelectedHistoryBtn");
@@ -123,6 +140,7 @@ closeWheelCandidateBtn.addEventListener("click", () => wheelCandidateDialog.clos
 closeTagManagerBtn.addEventListener("click", () => tagManagerDialog.close());
 openCleanupBtn.addEventListener("click", openCleanup);
 closeCleanupBtn.addEventListener("click", () => cleanupDialog.close());
+closeAxisDetailBtn.addEventListener("click", () => axisDetailDialog.close());
 purgeHistoryBtn.addEventListener("click", purgeHistoryBeforeDate);
 deleteSelectedHistoryBtn.addEventListener("click", deleteSelectedHistoryRecords);
 restaurantSearchInput.addEventListener("input", renderRestaurants);
@@ -934,7 +952,7 @@ function renderCategoryPresetSelect() {
   const current = sanitizeCategory(categoryInput.value);
   const categories = existingCategories();
   categoryPresetSelect.replaceChildren(
-    createOption("", categories.length ? "选择已有标签" : "暂无已有标签"),
+    createOption("", categories.length ? "已有标签" : "暂无已有标签"),
     ...categories.map((category) => createOption(category, category))
   );
   categoryPresetSelect.value = categories.includes(current) ? current : "";
@@ -986,7 +1004,8 @@ function renderWheel() {
   }
 
   let start = -Math.PI / 2;
-  for (const segment of segments) {
+  const labelQueue = [];
+  segments.forEach((segment) => {
     const end = start + Math.PI * 2 * segment.ratio;
     ctx.beginPath();
     ctx.moveTo(center, center);
@@ -994,24 +1013,77 @@ function renderWheel() {
     ctx.closePath();
     ctx.fillStyle = segment.restaurant.colorHex;
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.72)";
-    ctx.lineWidth = 4;
+    paintSliceLighting(center, radius, start, end);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.58)";
+    ctx.lineWidth = 3;
     ctx.stroke();
-    drawWheelLabel(segment, start, end, center, radius);
+    labelQueue.push({ segment, start, end });
     start = end;
-  }
+  });
 
+  paintWheelGrain(center, radius);
+  paintWheelFinish(center, radius);
+  labelQueue.forEach((item) => drawWheelLabel(item.segment, item.start, item.end, center, radius));
+}
+
+function paintSliceLighting(center, radius, startAngle, endAngle) {
+  ctx.save();
+  ctx.clip();
+  const highlight = ctx.createRadialGradient(center - radius * 0.34, center - radius * 0.44, radius * 0.08, center, center, radius);
+  highlight.addColorStop(0, "rgba(255, 255, 255, 0.26)");
+  highlight.addColorStop(0.48, "rgba(255, 255, 255, 0.04)");
+  highlight.addColorStop(1, "rgba(17, 24, 39, 0.14)");
+  ctx.fillStyle = highlight;
+  ctx.beginPath();
+  ctx.moveTo(center, center);
+  ctx.arc(center, center, radius, startAngle, endAngle);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function paintWheelGrain(center, radius) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center, center, radius - 3, 0, Math.PI * 2);
+  ctx.clip();
+  for (let index = 0; index < 120; index += 1) {
+    const seed = Math.sin(index * 91.7) * 10000;
+    const seed2 = Math.sin(index * 37.3 + 4.2) * 10000;
+    const angle = (seed - Math.floor(seed)) * Math.PI * 2;
+    const distance = Math.sqrt(seed2 - Math.floor(seed2)) * (radius - 18);
+    const x = center + Math.cos(angle) * distance;
+    const y = center + Math.sin(angle) * distance;
+    ctx.fillStyle = index % 2 ? "rgba(255, 255, 255, 0.10)" : "rgba(17, 24, 39, 0.055)";
+    ctx.fillRect(x, y, 1.4, 1.4);
+  }
+  ctx.restore();
+}
+
+function paintWheelFinish(center, radius) {
   ctx.beginPath();
   ctx.arc(center, center, radius - 4, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.62)";
-  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.72)";
+  ctx.lineWidth = 6;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(center, center, radius - 16, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(17, 24, 39, 0.10)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(17, 24, 39, 0.12)";
+  ctx.lineWidth = 4;
   ctx.stroke();
+
+  const gloss = ctx.createLinearGradient(center - radius, center - radius, center + radius, center + radius);
+  gloss.addColorStop(0, "rgba(255, 255, 255, 0.20)");
+  gloss.addColorStop(0.52, "rgba(255, 255, 255, 0)");
+  gloss.addColorStop(1, "rgba(17, 24, 39, 0.10)");
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center, center, radius - 2, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = gloss;
+  ctx.fillRect(center - radius, center - radius, radius * 2, radius * 2);
+  ctx.restore();
 }
 
 function drawWheelLabel(segment, startAngle, endAngle, center, radius) {
@@ -1026,6 +1098,7 @@ function drawWheelLabel(segment, startAngle, endAngle, center, radius) {
 
   ctx.save();
   ctx.translate(x, y);
+  ctx.rotate(-((rotation % 360) * Math.PI / 180));
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.shadowColor = "rgba(15, 23, 42, 0.24)";
@@ -1698,20 +1771,12 @@ function restaurantForRecord(record) {
 }
 
 function showAxisDetails(date, records) {
-  const title = document.createElement("strong");
-  title.textContent = `${date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "long" })} · ${records.length}条`;
-
-  const list = document.createElement("div");
-  list.className = "axis-detail-list";
-  list.replaceChildren(...records
+  axisDialogTitle.textContent = `${date.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric", weekday: "long" })} · ${records.length}条`;
+  axisDialogContent.replaceChildren(...records
     .slice()
     .sort((a, b) => timeValue(a.pickedAt) - timeValue(b.pickedAt))
     .map(createAxisDetailItem));
-
-  const detail = document.createElement("section");
-  detail.className = "axis-detail-card";
-  detail.append(title, list);
-  axisDetail.replaceChildren(detail);
+  axisDetailDialog.showModal();
 }
 
 function createAxisDetailItem(record) {
